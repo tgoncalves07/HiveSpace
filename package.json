@@ -1,0 +1,23 @@
+{
+  "name": "planora",
+  "version": "0.0.1",
+  "description": "Softwares de gestão de projetos empresariais",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tgoncalves07/planora.git"
+  },
+  "author": "tgoncalves07",
+  "bugs": {
+    "url": "https://github.com/tgoncalves07/planora/issues"
+  },
+  "homepage": "https://github.com/tgoncalves07/planora#readme",
+  "devDependencies": {
+    "electron": "^34.0.2"
+  }
+}
