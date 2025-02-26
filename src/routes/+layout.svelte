@@ -6,7 +6,7 @@
 <main class="app">
 	<aside>
 		<h1 style="text-align: center;">
-			<img class="hive" src="icon.png" alt="" /> HiveSpace
+			<img class="hive" src="icon.svg" alt="" /> HiveSpace
 		</h1>
 		<nav style="padding: 30px;">
 			<a href="/"><img class="icon" src="/casa.svg" alt="home" /> Pagina Principal</a> <br />
