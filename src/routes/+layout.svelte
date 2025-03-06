@@ -5,10 +5,10 @@
 
 <main class="app">
 	<aside>
-		<h1 style="text-align: center;">
+		<h1>
 			<img class="hive" src="icon.svg" alt="" /> HiveSpace
 		</h1>
-		<nav style="padding: 30px;">
+		<nav>
 			<a href="/"><img class="icon" src="/casa.svg" alt="home" /> Pagina Principal</a> <br />
 			<a href="/projetos"><img class="icon" src="/mala.svg" alt="mala" /> Projetos</a><br />
 			<a href="/ideias"><img class="icon" src="lamp.svg" alt="lamp" /> Ideias</a><br />
