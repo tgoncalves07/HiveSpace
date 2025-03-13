@@ -1,58 +1,48 @@
-:root {
-	--nav-bg-color: #1A1A2E; /* Azul escuro profundo */
-	--nav-text-color: #E0E0E0; /* Cinza claro */
-	--nav-hover-color: #00B4D8; /* Azul claro vibrante */
-	--nav-active-color: #00B4D8; /* Azul claro vibrante */
-	--nav-mobile-bg-color: #16213E; /* Azul escuro mais claro para dispositivos móveis */
-	--page-bg-color: #F0F4F8; /* Cinza claro suave */
-	--page-text-color: #1A1A2E; /* Azul escuro profundo */
-  }
-  
-  h1,
-  h2,
-  h3,
-  h5,
-  h6 {
+h1,
+h2,
+h3,
+h5,
+h6 {
 	margin: 0;
-  }
-  
-  body {
+}
+
+body {
 	font-family: system-ui;
 	background-color: #d3d3d3;
 	margin: 0;
 	height: 100vh;
-  }
-  
-  .icon {
+}
+
+.icon {
 	vertical-align: middle;
-  }
-  
-  .app {
+}
+
+.app {
 	display: grid;
 	grid-template-columns: 225px 1fr;
 	grid-template-rows: auto;
 	height: 100%;
 	width: 100%;
-  }
-  
-  aside h1 {
+}
+
+aside h1 {
 	font-size: 24px;
 	margin-bottom: 20px;
 	color: #000000;
 	margin-top: 23px;
-  }
-  
-  aside {
+}
+
+aside {
 	padding: 1rem;
 	background-color: #ffffff;
 	border-right: 1px solid rgb(185, 185, 185);
-  }
-  
-  aside * {
+}
+
+aside * {
 	color: black;
-  }
-  
-  aside a {
+}
+
+aside a {
 	display: flex;
 	align-items: center;
 	gap: 0.5em;
@@ -61,14 +51,14 @@
 	font-weight: bold;
 	border-radius: 4px;
 	transition: all 120ms ease-in-out;
-  }
-  
-  aside a:hover {
+}
+
+aside a:hover {
 	background: hsla(0, 0%, 0%, 0.15);
-  }
-  
-  .hive {
+}
+
+.hive {
 	width: 40px;
 	vertical-align: middle;
 	margin-left: 10px;
-  }
+}

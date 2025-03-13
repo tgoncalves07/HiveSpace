@@ -41,17 +41,12 @@
 
 <style>
 	:root {
-		--primary-color: #6c5ce7; 
-		--secondary-color: #636363; 
-		--background-color: #c7c7c7; 
-		--text-color: #686868; 
+		--primary-color: #6c5ce7;
+		--secondary-color: #636363;
+		--background-color: #c7c7c7;
+		--text-color: #686868;
 		--hover-color: #d1d8e0;
-		--active-color: #a3a3a3; 
-	}
-
-
-	body {
-		font-family: 'Cocogoose', Arial, sans-serif;
+		--active-color: #a3a3a3;
 	}
 
 	.navbar {
@@ -89,7 +84,7 @@
 	.navbar-brand h1 {
 		font-size: 32px;
 		color: var(--primary-color);
-		font-family: 'Cocogoose', Arial, sans-serif; 
+		font-family: 'Cocogoose', Arial, sans-serif;
 	}
 
 	.navbar-links {
@@ -105,8 +100,10 @@
 		text-decoration: none;
 		padding: 10px;
 		border-radius: 5px;
-		transition: background-color 0.3s, color 0.3s;
-		font-family: 'Cocogoose', Arial, sans-serif; 
+		transition:
+			background-color 0.3s,
+			color 0.3s;
+		font-family: 'Cocogoose', Arial, sans-serif;
 	}
 
 	.navbar-links a:hover {

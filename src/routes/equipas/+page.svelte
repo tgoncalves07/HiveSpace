@@ -2,14 +2,14 @@
 <p>Esta é a página das equipas.</p>
 
 <style>
-  h1 {
-    color: #2c3e50; /* Texto azul escuro */
-    font-size: 2.5rem;
-    margin-top: 80px; /* Para evitar que o conteúdo fique escondido atrás da navbar */
-  }
+	h1 {
+		color: #2c3e50;
+		font-size: 2.5rem;
+		margin-top: 80px;
+	}
 
-  p {
-    color: #34495e; /* Texto azul mais claro */
-    font-size: 1.2rem;
-  }
+	p {
+		color: #34495e;
+		font-size: 1.2rem;
+	}
 </style>
