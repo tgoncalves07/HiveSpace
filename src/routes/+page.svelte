@@ -1,5 +1,5 @@
 <h1>Bem-vindo ao HiveSpace</h1>
-<p>Esta é a página principal da sua aplicação.</p>
+<p>Esta é a página dos projetos.</p>
 
 <style>
 	h1 {
