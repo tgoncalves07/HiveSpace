@@ -1,5 +1,5 @@
 <h1>Bem-vindo ao HiveSpace</h1>
-<p>Esta é a página das equipas.</p>
+<p>Esta é a página do calendario</p>
 
 <style>
 	h1 {

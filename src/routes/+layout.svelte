@@ -35,9 +35,9 @@
 			<img src="/lamp.svg" alt="Ideias" />
 			{#if isOpen}<span>Ideias</span>{/if}
 		</a>
-		<a href="/equipas" class={$page.url.pathname === '/equipas' ? 'active' : ''}>
-			<img src="/equipas.svg" alt="Equipas" />
-			{#if isOpen}<span>Equipas</span>{/if}
+		<a href="/calendario" class={$page.url.pathname === '/calendario' ? 'active' : ''}>
+			<img src="/equipas.svg" alt="Calendario" />
+			{#if isOpen}<span>Calendario</span>{/if}
 		</a>
 		<a href="/chat" class={$page.url.pathname === '/chat' ? 'active' : ''}>
 			<img src="/chat.svg" alt="Chat" />
