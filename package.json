@@ -34,7 +34,14 @@
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
+		"@auth/core": "^0.38.0",
+		"@auth/sveltekit": "^1.8.0",
+		"@lucia-auth/oauth": "^3.5.3",
+		"@lucia-auth/sveltekit": "^0.6.11",
+		"@prisma/client": "^6.6.0",
 		"chart.js": "^4.4.8",
+		"lucia": "^2.7.7",
+		"prisma": "^6.6.0",
 		"recharts": "^2.15.2"
 	}
 }
