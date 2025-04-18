@@ -1,13 +1,11 @@
 <script>
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import '../app.css';
 
 	let isOpen = true;
 
 	function handleBrandClick() {
 		isOpen = !isOpen;
-		goto('/');
 	}
 </script>
 
