@@ -1,8 +1,58 @@
 <script>
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import '../app.css';
 
 	let isOpen = true;
+	let draggedIndex = null;
+	let dragOverIndex = null;
+
+	// Lista original de links
+	const defaultLinks = [
+		{ path: '/', label: 'Página Principal', icon: '/home.svg' },
+		{ path: '/projetos', label: 'Projetos', icon: '/mala.svg' },
+		{ path: '/tarefas', label: 'Tarefas', icon: '/task.svg' },
+		{ path: '/notas', label: 'Notas', icon: '/notes.svg' },
+		{ path: '/calendario', label: 'Calendario', icon: '/calendario.svg' },
+		{ path: '/config', label: 'Configurações', icon: '/gear.svg' },
+		{ path: '/sobre', label: 'Sobre', icon: '/sobre.svg' }
+	];
+
+	let links = [];
+
+	onMount(() => {
+		// Carregar ordem salva do localStorage
+		const savedOrder = localStorage.getItem('sidebarLinksOrder');
+		links = savedOrder ? JSON.parse(savedOrder) : [...defaultLinks];
+	});
+
+	function handleDragStart(event, index) {
+		draggedIndex = index;
+		event.dataTransfer.effectAllowed = 'move';
+		event.currentTarget.classList.add('dragging');
+	}
+
+	function handleDragOver(event, index) {
+		event.preventDefault();
+		dragOverIndex = index;
+		if (draggedIndex === null || draggedIndex === dragOverIndex) return;
+
+		// Atualizar visualmente a posição
+		const items = [...links];
+		const draggedItem = items[draggedIndex];
+		items.splice(draggedIndex, 1);
+		items.splice(dragOverIndex, 0, draggedItem);
+
+		links = items;
+		draggedIndex = dragOverIndex;
+	}
+
+	function handleDragEnd() {
+		draggedIndex = null;
+		dragOverIndex = null;
+		localStorage.setItem('sidebarLinksOrder', JSON.stringify(links));
+		document.querySelectorAll('.sidebar-links a').forEach((el) => el.classList.remove('dragging'));
+	}
 
 	function handleBrandClick() {
 		isOpen = !isOpen;
@@ -21,41 +71,26 @@
 		{#if isOpen}<h1 class="fixed-color">HiveSpace</h1>{/if}
 	</div>
 	<div class="sidebar-links">
-		<a href="/" class={$page.url.pathname === '/' ? 'active' : ''}>
-			<img src="/home.svg" alt="Página Principal" />
-			{#if isOpen}<span>Página Principal</span>{/if}
-		</a>
-		<a href="/projetos" class={$page.url.pathname === '/projetos' ? 'active' : ''}>
-			<img src="/mala.svg" alt="Projetos" />
-			{#if isOpen}<span>Projetos</span>{/if}
-		</a>
-		<a href="/ideias" class={$page.url.pathname === '/ideias' ? 'active' : ''}>
-			<img src="/lamp.svg" alt="Ideias" />
-			{#if isOpen}<span>Ideias</span>{/if}
-		</a>
-		<a href="/calendario" class={$page.url.pathname === '/calendario' ? 'active' : ''}>
-			<img src="/equipas.svg" alt="Calendario" />
-			{#if isOpen}<span>Calendario</span>{/if}
-		</a>
-		<a href="/chat" class={$page.url.pathname === '/chat' ? 'active' : ''}>
-			<img src="/chat.svg" alt="Chat" />
-			{#if isOpen}<span>Chat</span>{/if}
-		</a>
-		<a href="/config" class={$page.url.pathname === '/config' ? 'active' : ''}>
-			<img src="/gear.svg" alt="Configurações" />
-			{#if isOpen}<span>Configurações</span>{/if}
-		</a>
-		<a href="/sobre" class={$page.url.pathname === '/sobre' ? 'active' : ''}>
-			<img src="/sobre.svg" alt="Sobre" />
-			{#if isOpen}<span>Sobre</span>{/if}
-		</a>
+		{#each links as link, index (link.path)}
+			<a
+				href={link.path}
+				class={$page.url.pathname === link.path ? 'active' : ''}
+				draggable="true"
+				on:dragstart={(e) => handleDragStart(e, index)}
+				on:dragover={(e) => handleDragOver(e, index)}
+				on:dragend={handleDragEnd}
+				on:touchstart={(e) => handleDragStart(e, index)}
+				on:touchmove={(e) => e.preventDefault()}
+			>
+				<img src={link.icon} alt={link.label} />
+				{#if isOpen}<span>{link.label}</span>{/if}
+			</a>
+		{/each}
 	</div>
 </div>
 
 <main class="content">
-	<div class="content-wrapper">
-		<slot />
-	</div>
+	<slot />
 </main>
 
 <style>
@@ -80,13 +115,17 @@
 		box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: left;
 		width: 250px;
 		z-index: 1000;
 	}
 
 	.sidebar.closed {
 		width: 80px;
+	}
+
+	.sidebar.closed .sidebar-links a {
+		justify-content: center;
 	}
 
 	.sidebar-brand {
@@ -138,13 +177,11 @@
 		width: 100%;
 		padding: 0 10px;
 		box-sizing: border-box;
-		align-items: center;
+		align-items: left;
 	}
 
 	.sidebar-links a {
 		display: flex;
-		align-items: center;
-		justify-content: center;
 		gap: 10px;
 		color: var(--text-color);
 		text-decoration: none;
@@ -152,18 +189,26 @@
 		border-radius: 5px;
 		transition:
 			background-color 0.3s,
-			color 0.3s;
+			color 0.3s,
+			transform 0.2s,
+			opacity 0.2s;
 		white-space: nowrap;
 		width: calc(100% - 20px);
+		user-select: none;
 	}
 
 	.sidebar-links a:hover {
 		background-color: var(--hover-color);
+		cursor: grab;
 	}
 
 	.sidebar-links a.active {
 		background-color: var(--active-color);
 		color: var(--background-color);
+	}
+
+	.sidebar-links a:active {
+		cursor: grabbing;
 	}
 
 	.sidebar-links img {

@@ -34,14 +34,20 @@
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
-		"@auth/core": "^0.38.0",
+		"@auth/core": "^0.39.0",
 		"@auth/sveltekit": "^1.8.0",
-		"@lucia-auth/oauth": "^3.5.3",
-		"@lucia-auth/sveltekit": "^0.6.11",
+		"@fortawesome/free-solid-svg-icons": "^6.7.2",
+		"@fortawesome/svelte-fontawesome": "^0.2.3",
+		"@fullcalendar/core": "^6.1.17",
+		"@fullcalendar/daygrid": "^6.1.17",
+		"@fullcalendar/interaction": "^6.1.17",
 		"@prisma/client": "^6.6.0",
 		"chart.js": "^4.4.8",
-		"lucia": "^2.7.7",
+		"date-fns": "^4.1.0",
+		"lucia": "^3.2.2",
+		"lucide-svelte": "^0.506.0",
 		"prisma": "^6.6.0",
-		"recharts": "^2.15.2"
+		"recharts": "^2.15.2",
+		"svelte-icons": "^2.1.0"
 	}
 }
