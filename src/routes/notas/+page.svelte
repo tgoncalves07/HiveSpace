@@ -18,13 +18,15 @@
 		BarChart,
 		AlertCircle,
 		Target,
-		Filter
+		Filter,
+		AlertTriangle
 	} from 'lucide-svelte';
 
 	let currentNote = { id: '', title: '', content: '' };
 	let showModal = false;
 	let isEditing = false;
 	let searchTerm = '';
+	let notaParaExcluir = null;
 
 	$: filteredNotes = $notesStore.filter(
 		(note) =>
@@ -56,10 +58,15 @@
 		showModal = true;
 	}
 
-	function deleteNote(id) {
-		if (confirm('Tem certeza que deseja excluir esta nota?')) {
-			notesStore.deleteNote(id);
-			if (currentNote.id === id) closeModal();
+	function solicitarExclusao(note) {
+		notaParaExcluir = note;
+	}
+
+	function confirmarExclusao() {
+		if (notaParaExcluir) {
+			notesStore.deleteNote(notaParaExcluir.id);
+			notaParaExcluir = null;
+			if (currentNote.id === notaParaExcluir.id) closeModal();
 		}
 	}
 
@@ -132,7 +139,7 @@
 								<button class="btn-icon" on:click={() => openEditModal(note)}>
 									<Edit size={18} stroke-width="1.5" />
 								</button>
-								<button class="btn-icon danger" on:click={() => deleteNote(note.id)}>
+								<button class="btn-icon danger" on:click={() => solicitarExclusao(note)}>
 									<Trash2 size={18} stroke-width="1.5" />
 								</button>
 							</div>
@@ -196,6 +203,26 @@
 						<button type="button" class="btn-secondary" on:click={closeModal}> Cancelar </button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Modal de Confirmação de Exclusão -->
+	{#if notaParaExcluir}
+		<div class="modal-overlay" on:click|self={() => (notaParaExcluir = null)} transition:fade>
+			<div class="modal-content" transition:slide|local>
+				<h2><AlertTriangle size={24} /> Confirmar Exclusão</h2>
+				<p>Tem certeza que deseja excluir a nota "<strong>{notaParaExcluir.title}</strong>"?</p>
+				<p class="aviso-exclusao">Esta ação é irreversível e excluirá a nota permanentemente!</p>
+
+				<div class="modal-actions">
+					<button class="btn-secondary" on:click={() => (notaParaExcluir = null)}>
+						Cancelar
+					</button>
+					<button class="btn-danger" on:click={confirmarExclusao}>
+						<Trash2 size={16} /> Confirmar Exclusão
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -534,6 +561,33 @@
 
 	.btn-secondary:hover {
 		background: #d0d0d0;
+	}
+
+	/* Estilos para o modal de confirmação de exclusão */
+	.aviso-exclusao {
+		color: var(--danger);
+		background-color: #fff0f0;
+		padding: 0.75rem;
+		border-radius: 4px;
+		margin: 1rem 0;
+		border-left: 3px solid var(--danger);
+	}
+
+	.btn-danger {
+		background: var(--danger);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		transition: background 0.3s;
+	}
+
+	.btn-danger:hover {
+		background: #b30000;
 	}
 
 	@media (max-width: 768px) {

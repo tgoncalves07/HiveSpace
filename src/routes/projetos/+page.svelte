@@ -31,6 +31,7 @@
 	let filtro: Status | 'todos' = 'todos';
 	let showModal = false;
 	let editando = false;
+	let projetoParaExcluir: Projeto | null = null;
 
 	let projetoId: number | null = null;
 	let nome = '';
@@ -195,7 +196,7 @@
 
 						<div class="tarefa-acoes">
 							<button class="btn-icon" on:click={() => editarProjeto(p)}><Edit size={16} /></button>
-							<button class="btn-icon danger" on:click={() => excluirProjeto(p.id)}
+							<button class="btn-icon danger" on:click={() => (projetoParaExcluir = p)}
 								><Trash2 size={16} /></button
 							>
 						</div>
@@ -270,6 +271,34 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Modal de Confirmação de Exclusão -->
+	{#if projetoParaExcluir}
+		<div class="modal-overlay" on:click|self={() => (projetoParaExcluir = null)} transition:fade>
+			<div class="modal-content" transition:slide|local>
+				<h2><AlertTriangle size={24} /> Confirmar Exclusão</h2>
+				<p>
+					Tem certeza que deseja excluir o projeto "<strong>{projetoParaExcluir.nome}</strong>"?
+				</p>
+				<p class="aviso-exclusao">Esta ação é irreversível e excluirá todos os dados do projeto!</p>
+
+				<div class="modal-actions">
+					<button class="btn-secondary" on:click={() => (projetoParaExcluir = null)}>
+						Cancelar
+					</button>
+					<button
+						class="btn-danger"
+						on:click={() => {
+							excluirProjeto(projetoParaExcluir.id);
+							projetoParaExcluir = null;
+						}}
+					>
+						<Trash2 size={16} /> Confirmar Exclusão
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -583,6 +612,33 @@
 
 	.btn-secondary:hover {
 		background: #d0d0d0;
+	}
+
+	/* Estilos para o modal de confirmação de exclusão */
+	.aviso-exclusao {
+		color: var(--danger);
+		background-color: #fff0f0;
+		padding: 0.75rem;
+		border-radius: 4px;
+		margin: 1rem 0;
+		border-left: 3px solid var(--danger);
+	}
+
+	.btn-danger {
+		background: var(--danger);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		transition: background 0.3s;
+	}
+
+	.btn-danger:hover {
+		background: #b30000;
 	}
 
 	@media (max-width: 768px) {

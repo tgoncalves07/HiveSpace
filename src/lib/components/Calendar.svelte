@@ -165,9 +165,6 @@
 			<Calendar size={24} />
 			Meu Calendário
 		</h1>
-		<div class="header-controls">
-			<!-- Espaço para controles adicionais se necessário -->
-		</div>
 	</header>
 
 	<!-- Controles do calendário -->

@@ -356,11 +356,17 @@
 	{#if tarefaParaExcluir}
 		<div class="modal-overlay" on:click|self={fecharModal} transition:fade>
 			<div class="modal-content" transition:slide|local>
-				<h2><Trash2 size={18} /> Confirmar Exclusão</h2>
-				<p>Tem certeza que deseja excluir a tarefa "{tarefaParaExcluir.descricao}"?</p>
-				<div class="botoes-confirmacao">
+				<h2><AlertTriangle size={24} /> Confirmar Exclusão</h2>
+				<p>
+					Tem certeza que deseja excluir a tarefa "<strong>{tarefaParaExcluir.descricao}</strong>"?
+				</p>
+				<p class="aviso-exclusao">Esta ação é irreversível e excluirá a tarefa permanentemente!</p>
+
+				<div class="modal-actions">
 					<button class="btn-secondary" on:click={fecharModal}>Cancelar</button>
-					<button class="btn-danger" on:click={confirmarExclusao}>Confirmar Exclusão</button>
+					<button class="btn-danger" on:click={confirmarExclusao}>
+						<Trash2 size={16} /> Confirmar Exclusão
+					</button>
 				</div>
 			</div>
 		</div>
@@ -720,6 +726,33 @@
 
 	.btn-secondary:hover {
 		background: #d0d0d0;
+	}
+
+	/* Estilos para o modal de confirmação de exclusão */
+	.aviso-exclusao {
+		color: var(--danger);
+		background-color: #fff0f0;
+		padding: 0.75rem;
+		border-radius: 4px;
+		margin: 1rem 0;
+		border-left: 3px solid var(--danger);
+	}
+
+	.btn-danger {
+		background: var(--danger);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		transition: background 0.3s;
+	}
+
+	.btn-danger:hover {
+		background: #b30000;
 	}
 
 	@media (max-width: 768px) {

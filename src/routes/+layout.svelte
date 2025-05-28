@@ -119,7 +119,6 @@
 		box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 		display: flex;
 		flex-direction: column;
-		align-items: left;
 		width: 250px;
 		z-index: 1000;
 	}
@@ -179,7 +178,7 @@
 		gap: 15px;
 		margin-top: 20px;
 		width: 100%;
-		padding: 0 10px;
+		padding: 0 16px;
 		box-sizing: border-box;
 		align-items: left;
 	}
@@ -197,7 +196,6 @@
 			transform 0.2s,
 			opacity 0.2s;
 		white-space: nowrap;
-		width: calc(100% - 20px);
 		user-select: none;
 	}
 
