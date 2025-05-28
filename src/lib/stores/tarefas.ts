@@ -1,4 +1,4 @@
-//tarefas.ts
+//stores/tarefas.ts
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { Projeto } from './projetos';

@@ -59,6 +59,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>HiveSpace</title>
+</svelte:head>
+
 <div class="sidebar" class:open={isOpen} class:closed={!isOpen}>
 	<div
 		class="sidebar-brand"

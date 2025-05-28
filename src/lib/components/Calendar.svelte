@@ -1,207 +1,531 @@
-<!--src/lib/components/Calendar.svelte -->
+<!-- src/lib/components/Calendar.svelte -->
 <script>
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onMount } from 'svelte';
+	import { Calendar } from 'lucide-svelte';
+	import { reminders } from '$lib/stores/reminders'; // Importe a store de lembretes
 
-	export var headers = [];
-	export let days = [];
-	export let items = [];
+	let currentDate = new Date();
+	let selectedDate = null;
+	let showReminderModal = false;
+	let reminderText = '';
+	let reminderTime = '09:00';
 
-	let dispatch = createEventDispatcher();
+	// Funções de navegação
+	function previousMonth() {
+		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+	}
+
+	function nextMonth() {
+		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+	}
+
+	function getCalendarDays() {
+		const year = currentDate.getFullYear();
+		const month = currentDate.getMonth();
+
+		const firstDay = new Date(year, month, 1);
+		const lastDay = new Date(year, month + 1, 0);
+		const startDate = new Date(firstDay);
+		startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+		const days = [];
+		const currentDateObj = new Date(startDate);
+
+		for (let i = 0; i < 42; i++) {
+			days.push({
+				date: new Date(currentDateObj),
+				isCurrentMonth: currentDateObj.getMonth() === month,
+				isToday: isToday(currentDateObj),
+				hasReminder: hasReminderOnDate(currentDateObj)
+			});
+			currentDateObj.setDate(currentDateObj.getDate() + 1);
+		}
+
+		return days;
+	}
+
+	function isToday(date) {
+		const today = new Date();
+		return date.toDateString() === today.toDateString();
+	}
+
+	function hasReminderOnDate(date) {
+		const dateKey = formatDateKey(date);
+		return $reminders[dateKey] && $reminders[dateKey].length > 0;
+	}
+
+	function formatDateKey(date) {
+		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+	}
+
+	function formatDisplayDate(date) {
+		return date.toLocaleDateString('pt-BR', {
+			weekday: 'long',
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
+	}
+
+	function selectDate(date) {
+		selectedDate = date;
+		showReminderModal = true;
+		reminderText = '';
+		reminderTime = '09:00';
+	}
+
+	function addReminder() {
+		if (!reminderText.trim() || !selectedDate) return;
+
+		const dateKey = formatDateKey(selectedDate);
+
+		// Atualiza a store
+		reminders.update((r) => {
+			const updated = { ...r };
+			if (!updated[dateKey]) {
+				updated[dateKey] = [];
+			}
+			updated[dateKey].push({
+				id: Date.now(),
+				text: reminderText.trim(),
+				time: reminderTime
+			});
+			return updated;
+		});
+
+		closeModal();
+	}
+
+	function removeReminder(date, reminderId) {
+		const dateKey = formatDateKey(date);
+
+		// Atualiza a store
+		reminders.update((r) => {
+			if (!r[dateKey]) return r;
+			const updated = { ...r };
+			updated[dateKey] = updated[dateKey].filter((r) => r.id !== reminderId);
+			if (updated[dateKey].length === 0) {
+				delete updated[dateKey];
+			}
+			return updated;
+		});
+	}
+
+	function closeModal() {
+		showReminderModal = false;
+		selectedDate = null;
+	}
+
+	function getRemindersByDate(date) {
+		const dateKey = formatDateKey(date);
+		return $reminders[dateKey] || [];
+	}
+
+	function getMonthlyReminders() {
+		const month = currentDate.getMonth();
+		const year = currentDate.getFullYear();
+		const monthlyReminders = [];
+
+		// Itera sobre os lembretes na store
+		for (const [dateKey, remindersList] of Object.entries($reminders)) {
+			const [y, m] = dateKey.split('-').map(Number);
+			if (y === year && m - 1 === month) {
+				const date = new Date(y, m - 1, dateKey.split('-')[2]);
+				monthlyReminders.push({
+					date,
+					reminders: remindersList
+				});
+			}
+		}
+		return monthlyReminders;
+	}
+
+	const monthNames = [
+		'Janeiro',
+		'Fevereiro',
+		'Março',
+		'Abril',
+		'Maio',
+		'Junho',
+		'Julho',
+		'Agosto',
+		'Setembro',
+		'Outubro',
+		'Novembro',
+		'Dezembro'
+	];
+
+	const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 </script>
 
-<div class="calendar">
-	{#each headers as header}
-		<span class="day-name" on:click={() => dispatch('headerClick', header)}>{header}</span>
-	{/each}
+<div class="calendar-container">
+	<!-- Header idêntico ao da página de tarefas -->
+	<header class="page-header">
+		<h1>
+			<Calendar size={24} />
+			Meu Calendário
+		</h1>
+		<div class="header-controls">
+			<!-- Espaço para controles adicionais se necessário -->
+		</div>
+	</header>
 
-	{#each days as day}
-		{#if day.enabled}
-			<span class="day" on:click={() => dispatch('dayClick', day)}>{day.name}</span>
-		{:else}
-			<span class="day day-disabled" on:click={() => dispatch('dayClick', day)}>{day.name}</span>
-		{/if}
-	{/each}
+	<!-- Controles do calendário -->
+	<div class="calendar-header">
+		<button on:click={previousMonth} class="btn-secondary">‹</button>
+		<h2>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
+		<button on:click={nextMonth} class="btn-secondary">›</button>
+	</div>
 
-	{#each items as item}
-		<section
-			on:click={() => dispatch('itemClick', item)}
-			class="task {item.className}"
-			style="grid-column: {item.startCol} / span {item.len};      
-      grid-row: {item.startRow};  
-      align-self: {item.isBottom ? 'end' : 'center'};"
-		>
-			{item.title}
-			{#if item.detailHeader}
-				<div class="task-detail">
-					<h2>{item.detailHeader}</h2>
-					<p>{item.detailContent}</p>
+	<!-- Grade do calendário -->
+	<div class="calendar-grid">
+		{#each dayNames as dayName}
+			<div class="day-header">{dayName}</div>
+		{/each}
+
+		{#each getCalendarDays() as day}
+			<div
+				class="day-cell"
+				class:current-month={day.isCurrentMonth}
+				class:other-month={!day.isCurrentMonth}
+				class:today={day.isToday}
+				on:click={() => day.isCurrentMonth && selectDate(day.date)}
+			>
+				<span class="day-number">{day.date.getDate()}</span>
+				{#if day.hasReminder}
+					<div class="reminder-indicator"></div>
+				{/if}
+			</div>
+		{/each}
+	</div>
+
+	<!-- Lembretes do mês -->
+	<div class="monthly-reminders">
+		<h3>Lembretes de {monthNames[currentDate.getMonth()]}</h3>
+		{#if getMonthlyReminders().length > 0}
+			{#each getMonthlyReminders() as dayReminders (dayReminders.date)}
+				<div class="reminder-group">
+					<h4>{formatDisplayDate(dayReminders.date)}</h4>
+					{#each dayReminders.reminders as reminder (reminder.id)}
+						<div class="reminder-item">
+							<span class="time">{reminder.time}</span>
+							<span class="text">{reminder.text}</span>
+							<button
+								on:click|stopPropagation={() => removeReminder(dayReminders.date, reminder.id)}
+								class="btn-icon danger"
+							>
+								×
+							</button>
+						</div>
+					{/each}
 				</div>
-			{/if}
-		</section>
-	{/each}
+			{/each}
+		{:else}
+			<p class="empty">Nenhum lembrete para este mês</p>
+		{/if}
+	</div>
+
+	<!-- Modal de lembrete -->
+	{#if showReminderModal}
+		<div class="modal-overlay" on:click={closeModal}>
+			<div class="modal-content" on:click|stopPropagation>
+				<div class="modal-header">
+					<h3>Novo Lembrete</h3>
+					<button class="close-btn" on:click={closeModal}>×</button>
+				</div>
+				<div class="modal-body">
+					<div class="form-group">
+						<label>Data: {formatDisplayDate(selectedDate)}</label>
+					</div>
+					<div class="form-group">
+						<label>Horário:</label>
+						<input type="time" bind:value={reminderTime} class="input" />
+					</div>
+					<div class="form-group">
+						<label>Descrição:</label>
+						<input
+							type="text"
+							bind:value={reminderText}
+							placeholder="Digite seu lembrete..."
+							class="input"
+						/>
+					</div>
+				</div>
+				<div class="modal-actions">
+					<button on:click={addReminder} class="btn-primary">Salvar</button>
+					<button on:click={closeModal} class="btn-secondary">Cancelar</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.calendar {
-		display: grid;
-		width: 100%;
-		grid-template-columns: repeat(7, minmax(120px, 1fr));
-		grid-template-rows: 50px;
-		grid-auto-rows: 120px;
-		overflow: auto;
-	}
-	.day {
-		border-bottom: 1px solid rgba(166, 168, 179, 0.12);
-		border-right: 1px solid rgba(166, 168, 179, 0.12);
-		text-align: right;
-		padding: 14px 20px;
-		letter-spacing: 1px;
-		font-size: 14px;
-		box-sizing: border-box;
-		color: #98a0a6;
-		position: relative;
-		z-index: 1;
-	}
-	.day:nth-of-type(7n + 7) {
-		border-right: 0;
-	}
-	.day:nth-of-type(n + 1):nth-of-type(-n + 7) {
-		grid-row: 1;
-	}
-	.day:nth-of-type(n + 8):nth-of-type(-n + 14) {
-		grid-row: 2;
-	}
-	.day:nth-of-type(n + 15):nth-of-type(-n + 21) {
-		grid-row: 3;
-	}
-	.day:nth-of-type(n + 22):nth-of-type(-n + 28) {
-		grid-row: 4;
-	}
-	.day:nth-of-type(n + 29):nth-of-type(-n + 35) {
-		grid-row: 5;
-	}
-	.day:nth-of-type(n + 36):nth-of-type(-n + 42) {
-		grid-row: 6;
-	}
-	.day:nth-of-type(7n + 1) {
-		grid-column: 1/1;
-	}
-	.day:nth-of-type(7n + 2) {
-		grid-column: 2/2;
-	}
-	.day:nth-of-type(7n + 3) {
-		grid-column: 3/3;
-	}
-	.day:nth-of-type(7n + 4) {
-		grid-column: 4/4;
-	}
-	.day:nth-of-type(7n + 5) {
-		grid-column: 5/5;
-	}
-	.day:nth-of-type(7n + 6) {
-		grid-column: 6/6;
-	}
-	.day:nth-of-type(7n + 7) {
-		grid-column: 7/7;
-	}
-	.day-name {
-		font-size: 12px;
-		text-transform: uppercase;
-		color: #e9a1a7;
-		text-align: center;
-		border-bottom: 1px solid rgba(166, 168, 179, 0.12);
-		line-height: 50px;
-		font-weight: 500;
-	}
-	.day-disabled {
-		color: rgba(152, 160, 166, 0.5);
-		background-color: #ffffff;
-		background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fdf9ff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
-		cursor: not-allowed;
+	:root {
+		--primary: #333;
+		--secondary: #555;
+		--background: #f5f5f5;
+		--text: #222;
+		--border-color: #ddd;
+		--light-gray: #e0e0e0;
 	}
 
-	.task {
-		border-left-width: 3px;
-		padding: 8px 12px;
-		margin: 10px;
-		border-left-style: solid;
-		font-size: 14px;
-		position: relative;
-		align-self: center;
-		z-index: 2;
-		border-radius: 15px;
+	.page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid var(--border-color);
 	}
-	.task--warning {
-		border-left-color: #fdb44d;
-		background: #fef0db;
-		color: #fc9b10;
-		margin-top: -5px;
-	}
-	.task--danger {
-		border-left-color: #fa607e;
-		grid-column: 2 / span 3;
-		grid-row: 3;
-		margin-top: 15px;
-		background: rgba(253, 197, 208, 0.7);
-		color: #f8254e;
-	}
-	.task--info {
-		border-left-color: #4786ff;
-		margin-top: 15px;
-		background: rgba(218, 231, 255, 0.7);
-		color: #0a5eff;
-	}
-	.task--primary {
-		background: #4786ff;
-		border: 0;
-		border-radius: 14px;
-		color: #f00;
-		box-shadow: 0 10px 14px rgba(71, 134, 255, 0.4);
-	}
-	.task-detail {
-		position: absolute;
-		left: 0;
-		top: calc(100% + 8px);
-		background: #efe;
-		border: 1px solid rgba(166, 168, 179, 0.2);
-		color: #100;
-		padding: 20px;
-		box-sizing: border-box;
-		border-radius: 14px;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-		z-index: 2;
-	}
-	.task-detail:after,
-	.task-detail:before {
-		bottom: 100%;
-		left: 30%;
-		border: solid transparent;
-		content: ' ';
-		height: 0;
-		width: 0;
-		position: absolute;
-		pointer-events: none;
-	}
-	.task-detail:before {
-		border-bottom-color: rgba(166, 168, 179, 0.2);
-		border-width: 8px;
-		margin-left: -8px;
-	}
-	.task-detail:after {
-		border-bottom-color: #fff;
-		border-width: 6px;
-		margin-left: -6px;
-	}
-	.task-detail h2 {
-		font-size: 15px;
+
+	.page-header h1 {
+		font-size: 28px;
+		color: var(--text);
 		margin: 0;
-		color: #91565d;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 	}
-	.task-detail p {
-		margin-top: 4px;
-		font-size: 12px;
-		margin-bottom: 0;
+
+	.calendar-container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 1.5rem;
+		background: white;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.calendar-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		padding-bottom: 1rem;
+	}
+
+	.btn-secondary {
+		background: var(--light-gray);
+		color: var(--text);
+		border: 1px solid var(--border-color);
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.btn-secondary:hover {
+		background: #e0e0e0;
+	}
+
+	.calendar-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 1px;
+		background: var(--border-color);
+		margin-bottom: 2rem;
+	}
+
+	.day-header {
+		background: var(--background);
+		padding: 1rem;
+		text-align: center;
 		font-weight: 500;
-		color: rgba(81, 86, 93, 0.7);
+		color: var(--text);
+		border-bottom: 2px solid var(--border-color);
+	}
+
+	.day-cell {
+		background: white;
+		min-height: 100px;
+		padding: 0.5rem;
+		position: relative;
+		cursor: pointer;
+		transition: background 0.2s ease;
+		border: 1px solid var(--border-color);
+	}
+
+	.day-cell:hover {
+		background: var(--background);
+	}
+
+	.day-cell.other-month {
+		background: var(--background);
+		color: #999;
+	}
+
+	.day-cell.today {
+		background: var(--light-gray);
+		font-weight: 600;
+	}
+
+	.day-number {
+		display: block;
+		font-size: 0.9rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.reminder-indicator {
+		width: 6px;
+		height: 6px;
+		background: var(--primary);
+		border-radius: 50%;
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+	}
+
+	.monthly-reminders {
+		border-top: 1px solid var(--border-color);
+		padding-top: 2rem;
+	}
+
+	.monthly-reminders h3 {
+		font-size: 1.25rem;
+		margin-bottom: 1.5rem;
+		color: var(--text);
+	}
+
+	.reminder-group {
+		margin-bottom: 1.5rem;
+	}
+
+	.reminder-group h4 {
+		font-size: 0.9rem;
+		color: #666;
+		margin: 0 0 0.5rem 0;
+		font-weight: 500;
+	}
+
+	.reminder-item {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.75rem;
+		margin-bottom: 0.5rem;
+		background: var(--background);
+		border-radius: 4px;
+		border: 1px solid var(--border-color);
+	}
+
+	.reminder-item .time {
+		font-size: 0.85rem;
+		color: #666;
+		min-width: 60px;
+	}
+
+	.btn-icon {
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn-icon.danger:hover {
+		color: var(--primary);
+	}
+
+	.empty {
+		color: #999;
+		font-style: italic;
+	}
+
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.7);
+		display: grid;
+		place-items: center;
+		z-index: 1000;
+	}
+
+	.modal-content {
+		background: white;
+		padding: 1.5rem;
+		border-radius: 8px;
+		width: 90%;
+		max-width: 400px;
+		border: 1px solid var(--border-color);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.modal-header h3 {
+		margin: 0;
+		font-size: 1.25rem;
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		cursor: pointer;
+		color: var(--text);
+	}
+
+	.form-group {
+		margin-bottom: 1rem;
+	}
+
+	.form-group label {
+		display: block;
+		margin-bottom: 0.5rem;
+		color: var(--text);
+	}
+
+	.input {
+		width: 100%;
+		padding: 0.75rem;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		justify-content: flex-end;
+	}
+
+	.btn-primary {
+		background: var(--primary);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	@media (max-width: 768px) {
+		.calendar-container {
+			padding: 1rem;
+		}
+
+		.page-header h1 {
+			font-size: 24px;
+		}
+
+		.day-cell {
+			min-height: 80px;
+		}
+
+		.reminder-item {
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			padding: 0.5rem;
+		}
 	}
 </style>

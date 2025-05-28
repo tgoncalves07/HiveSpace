@@ -1,183 +1,669 @@
-<script lang="ts">
-	import { fade } from 'svelte/transition';
+<script>
 	import { onMount } from 'svelte';
+	import { tarefas, estatisticasTarefas } from '../lib/stores/tarefas';
+	import { projetos, estatisticasProjetos } from '../lib/stores/projetos';
+	import { reminders } from '../lib/stores/reminders';
 
-	let loaded = false;
+	// Importações dos ícones Lucide
+	import ClipboardList from 'lucide-svelte/icons/clipboard-list';
+	import Target from 'lucide-svelte/icons/target';
+	import Bell from 'lucide-svelte/icons/bell';
+	import AlertTriangle from 'lucide-svelte/icons/alert-triangle';
+	import Circle from 'lucide-svelte/icons/circle';
 
-	onMount(() => {
-		loaded = true;
-	});
-</script>
+	// Estado do calendário
+	let currentDate = new Date();
+	let selectedDate = new Date();
+	let calendarDays = [];
 
-<div class="hero" in:fade={{ duration: 500 }}>
-	<header class="header" in:fade={{ delay: 300, duration: 700 }}>
-		<h1 class="title">
-			<span class="title-line">Este projeto foi desenvolvido</span>
-			<span class="title-line">por mim para a minha PAP</span>
-		</h1>
-		<p class="subtitle">Uma</p>
-	</header>
+	// Dados das stores
+	let estatisticasT = { total: 0, porStatus: {}, porPrioridade: {}, atrasadas: 0 };
+	let estatisticasP = { total: 0, porStatus: {}, atrasados: 0 };
+	let todosLembretes = {};
 
-	{#if loaded}
-		<div class="cta-container" in:fade={{ delay: 600, duration: 500 }}>
-			<a href="/projetos" class="cta-button">
-				Explorar Projetos
-				<svg class="arrow-icon" viewBox="0 0 24 24">
-					<path d="M5 12h14M12 5l7 7-7 7" />
-				</svg>
-			</a>
-		</div>
-	{/if}
+	// Subscrever às stores
+	$: estatisticasTarefas.subscribe((stats) => (estatisticasT = stats));
+	$: estatisticasProjetos.subscribe((stats) => (estatisticasP = stats));
+	$: reminders.subscribe((r) => (todosLembretes = r));
 
-	<div class="decoration">
-		<div class="circle circle-1" />
-		<div class="circle circle-2" />
-		<div class="circle circle-3" />
-	</div>
-</div>
+	// Função para gerar os dias do calendário
+	function generateCalendarDays() {
+		const year = currentDate.getFullYear();
+		const month = currentDate.getMonth();
 
-<style>
-	:global(body) {
-		margin: 0;
-		padding: 0;
-		font-family:
-			'Inter',
-			-apple-system,
-			BlinkMacSystemFont,
-			sans-serif;
-		background-color: #f8fafc;
-		color: #0f172a;
+		const firstDay = new Date(year, month, 1);
+		const lastDay = new Date(year, month + 1, 0);
+		const startDate = new Date(firstDay);
+		startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+		const days = [];
+		for (let i = 0; i < 42; i++) {
+			const date = new Date(startDate);
+			date.setDate(startDate.getDate() + i);
+
+			days.push({
+				date: date.getDate(),
+				month: date.getMonth(),
+				year: date.getFullYear(),
+				isCurrentMonth: date.getMonth() === month,
+				isToday: date.toDateString() === new Date().toDateString(),
+				isSelected: date.toDateString() === selectedDate.toDateString()
+			});
+		}
+
+		calendarDays = days;
 	}
 
-	.hero {
+	function previousMonth() {
+		currentDate.setMonth(currentDate.getMonth() - 1);
+		currentDate = new Date(currentDate);
+		generateCalendarDays();
+	}
+
+	function nextMonth() {
+		currentDate.setMonth(currentDate.getMonth() + 1);
+		currentDate = new Date(currentDate);
+		generateCalendarDays();
+	}
+
+	function selectDate(day) {
+		if (day.isCurrentMonth) {
+			selectedDate = new Date(day.year, day.month, day.date);
+			generateCalendarDays();
+		}
+	}
+
+	// Obter saudação baseada na hora
+	function getGreeting() {
+		const hour = new Date().getHours();
+		if (hour < 12) return 'Bom dia';
+		if (hour < 18) return 'Boa tarde';
+		return 'Boa noite';
+	}
+
+	// Contar lembretes pendentes de hoje
+	function getTodayReminders() {
+		const today = new Date().toDateString();
+		return Object.keys(todosLembretes).filter((date) => new Date(date).toDateString() === today)
+			.length;
+	}
+
+	onMount(() => {
+		generateCalendarDays();
+	});
+
+	const monthNames = [
+		'Janeiro',
+		'Fevereiro',
+		'Março',
+		'Abril',
+		'Maio',
+		'Junho',
+		'Julho',
+		'Agosto',
+		'Setembro',
+		'Outubro',
+		'Novembro',
+		'Dezembro'
+	];
+
+	const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+</script>
+
+<main class="dashboard">
+	<!-- Header com saudação -->
+	<header class="header">
+		<div class="greeting">
+			<h1>{getGreeting()}</h1>
+			<p class="date">
+				{new Date().toLocaleDateString('pt-BR', {
+					weekday: 'long',
+					year: 'numeric',
+					month: 'long',
+					day: 'numeric'
+				})}
+			</p>
+		</div>
+	</header>
+
+	<!-- Grid principal -->
+	<div class="grid">
+		<!-- Resumo rápido com ícones Lucide -->
+		<section class="quick-summary">
+			<h2>Resumo</h2>
+			<div class="summary-cards">
+				<div class="summary-card">
+					<div class="card-icon"><ClipboardList size={24} /></div>
+					<div class="card-content">
+						<span class="card-number">{estatisticasT.total}</span>
+						<span class="card-label">Tarefas</span>
+					</div>
+				</div>
+				<div class="summary-card">
+					<div class="card-icon"><Target size={24} /></div>
+					<div class="card-content">
+						<span class="card-number">{estatisticasP.total}</span>
+						<span class="card-label">Projetos</span>
+					</div>
+				</div>
+				<div class="summary-card">
+					<div class="card-icon"><Bell size={24} /></div>
+					<div class="card-content">
+						<span class="card-number">{getTodayReminders()}</span>
+						<span class="card-label">Lembretes Hoje</span>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Status das Tarefas -->
+		<section class="status-section">
+			<h2>Tarefas</h2>
+			<div class="status-grid">
+				<div class="status-item">
+					<div class="status-bar">
+						<div
+							class="status-fill"
+							style="width: {estatisticasT.total > 0
+								? (estatisticasT.porStatus.pendente / estatisticasT.total) * 100
+								: 0}%"
+						></div>
+					</div>
+					<div class="status-info">
+						<span class="status-number">{estatisticasT.porStatus.pendente || 0}</span>
+						<span class="status-label">Pendentes</span>
+					</div>
+				</div>
+				<div class="status-item">
+					<div class="status-bar">
+						<div
+							class="status-fill active"
+							style="width: {estatisticasT.total > 0
+								? (estatisticasT.porStatus.emProgresso / estatisticasT.total) * 100
+								: 0}%"
+						></div>
+					</div>
+					<div class="status-info">
+						<span class="status-number">{estatisticasT.porStatus.emProgresso || 0}</span>
+						<span class="status-label">Em Progresso</span>
+					</div>
+				</div>
+				<div class="status-item">
+					<div class="status-bar">
+						<div
+							class="status-fill completed"
+							style="width: {estatisticasT.total > 0
+								? (estatisticasT.porStatus.concluida / estatisticasT.total) * 100
+								: 0}%"
+						></div>
+					</div>
+					<div class="status-info">
+						<span class="status-number">{estatisticasT.porStatus.concluida || 0}</span>
+						<span class="status-label">Concluídas</span>
+					</div>
+				</div>
+			</div>
+			{#if estatisticasT.atrasadas > 0}
+				<div class="alert">
+					<AlertTriangle size={16} />
+					{estatisticasT.atrasadas} tarefa{estatisticasT.atrasadas > 1 ? 's' : ''} atrasada{estatisticasT.atrasadas >
+					1
+						? 's'
+						: ''}
+				</div>
+			{/if}
+		</section>
+
+		<!-- Status dos Projetos -->
+		<section class="status-section">
+			<h2>Projetos</h2>
+			<div class="project-overview">
+				<div class="project-stats">
+					<div class="stat-circle">
+						<div
+							class="circle-progress"
+							style="--progress: {estatisticasP.total > 0
+								? (estatisticasP.porStatus.finalizado / estatisticasP.total) * 100
+								: 0}%"
+						>
+							<span class="circle-text"
+								>{estatisticasP.total > 0
+									? Math.round((estatisticasP.porStatus.finalizado / estatisticasP.total) * 100)
+									: 0}%</span
+							>
+						</div>
+						<span class="circle-label">Finalizados</span>
+					</div>
+				</div>
+				<div class="project-breakdown">
+					<div class="breakdown-item">
+						<span class="breakdown-dot idea"><Circle size={8} /></span>
+						<span>{estatisticasP.porStatus.ideia || 0} Ideias</span>
+					</div>
+					<div class="breakdown-item">
+						<span class="breakdown-dot pending"><Circle size={8} /></span>
+						<span>{estatisticasP.porStatus.pendente || 0} Pendentes</span>
+					</div>
+					<div class="breakdown-item">
+						<span class="breakdown-dot active"><Circle size={8} /></span>
+						<span>{estatisticasP.porStatus.emProcesso || 0} Em Processo</span>
+					</div>
+				</div>
+			</div>
+			{#if estatisticasP.atrasados > 0}
+				<div class="alert">
+					<AlertTriangle size={16} />
+					{estatisticasP.atrasados} projeto{estatisticasP.atrasados > 1 ? 's' : ''} atrasado{estatisticasP.atrasados >
+					1
+						? 's'
+						: ''}
+				</div>
+			{/if}
+		</section>
+
+		<!-- Calendário -->
+		<section class="calendar-section">
+			<h2>Calendário</h2>
+			<div class="calendar">
+				<div class="calendar-header">
+					<button class="nav-btn" on:click={previousMonth}>‹</button>
+					<span class="month-year"
+						>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</span
+					>
+					<button class="nav-btn" on:click={nextMonth}>›</button>
+				</div>
+				<div class="calendar-grid">
+					{#each dayNames as day}
+						<div class="day-header">{day}</div>
+					{/each}
+					{#each calendarDays as day}
+						<button
+							class="calendar-day"
+							class:other-month={!day.isCurrentMonth}
+							class:today={day.isToday}
+							class:selected={day.isSelected}
+							on:click={() => selectDate(day)}
+						>
+							{day.date}
+						</button>
+					{/each}
+				</div>
+			</div>
+		</section>
+	</div>
+</main>
+
+<style>
+	.dashboard {
 		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		text-align: center;
-		padding: 0 1.5rem;
-		position: relative;
-		overflow: hidden;
+		background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+		padding: 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 	}
 
 	.header {
-		max-width: 800px;
 		margin-bottom: 3rem;
-		position: relative;
-		z-index: 2;
 	}
 
-	.title {
-		font-size: clamp(2rem, 5vw, 3.5rem);
-		font-weight: 800;
-		line-height: 1.2;
-		margin: 0 0 1.5rem 0;
-		letter-spacing: -0.05em;
+	.greeting h1 {
+		font-size: 2.5rem;
+		font-weight: 300;
+		color: #212529;
+		margin: 0 0 0.5rem 0;
+		letter-spacing: -0.02em;
 	}
 
-	.title-line {
-		display: block;
+	.date {
+		color: #6c757d;
+		font-size: 1.1rem;
+		margin: 0;
+		text-transform: capitalize;
 	}
 
-	.subtitle {
-		font-size: 1.25rem;
-		color: #64748b;
-		max-width: 600px;
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+		max-width: 1400px;
 		margin: 0 auto;
-		line-height: 1.6;
 	}
 
-	.cta-container {
-		position: relative;
-		z-index: 2;
+	/* Quick Summary */
+	.quick-summary {
+		grid-column: 1 / -1;
 	}
 
-	.cta-button {
-		display: inline-flex;
+	.quick-summary h2 {
+		font-size: 1.25rem;
+		font-weight: 500;
+		color: #343a40;
+		margin: 0 0 1.5rem 0;
+	}
+
+	.summary-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+	}
+
+	.summary-card {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		background-color: #0f172a;
-		color: white;
-		padding: 1rem 2rem;
-		border-radius: 50px;
-		text-decoration: none;
-		font-weight: 600;
-		transition: all 0.3s ease;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		gap: 1rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+		border: 1px solid #e9ecef;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 
-	.cta-button:hover {
-		background-color: #1e293b;
+	.summary-card:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 	}
 
-	.arrow-icon {
-		width: 20px;
-		height: 20px;
-		stroke: currentColor;
-		stroke-width: 2;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		fill: none;
+	.card-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.decoration {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
+	.card-content {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.card-number {
+		font-size: 2rem;
+		font-weight: 600;
+		color: #212529;
+		line-height: 1;
+	}
+
+	.card-label {
+		color: #6c757d;
+		font-size: 0.9rem;
+		margin-top: 0.25rem;
+	}
+
+	/* Status Sections */
+	.status-section {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+		border: 1px solid #e9ecef;
+	}
+
+	.status-section h2 {
+		font-size: 1.25rem;
+		font-weight: 500;
+		color: #343a40;
+		margin: 0 0 1.5rem 0;
+	}
+
+	.status-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.status-item {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.status-bar {
+		flex: 1;
+		height: 8px;
+		background: #f1f3f4;
+		border-radius: 4px;
 		overflow: hidden;
 	}
 
-	.circle {
-		position: absolute;
+	.status-fill {
+		height: 100%;
+		background: #6c757d;
+		border-radius: 4px;
+		transition: width 0.3s ease;
+	}
+
+	.status-fill.active {
+		background: #007bff;
+	}
+
+	.status-fill.completed {
+		background: #28a745;
+	}
+
+	.status-info {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		min-width: 80px;
+	}
+
+	.status-number {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #212529;
+		line-height: 1;
+	}
+
+	.status-label {
+		color: #6c757d;
+		font-size: 0.8rem;
+		margin-top: 0.25rem;
+	}
+
+	/* Project Overview */
+	.project-overview {
+		display: flex;
+		align-items: center;
+		gap: 2rem;
+	}
+
+	.stat-circle {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.circle-progress {
+		width: 80px;
+		height: 80px;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-		opacity: 0.6;
+		background: conic-gradient(
+			#28a745 0deg,
+			#28a745 calc(var(--progress) * 3.6deg),
+			#f1f3f4 calc(var(--progress) * 3.6deg)
+		);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
 	}
 
-	.circle-1 {
-		width: 300px;
-		height: 300px;
-		top: -100px;
-		left: -100px;
+	.circle-progress::before {
+		content: '';
+		width: 60px;
+		height: 60px;
+		border-radius: 50%;
+		background: white;
+		position: absolute;
 	}
 
-	.circle-2 {
-		width: 500px;
-		height: 500px;
-		bottom: -200px;
-		right: -200px;
+	.circle-text {
+		font-size: 1rem;
+		font-weight: 600;
+		color: #212529;
+		z-index: 1;
 	}
 
-	.circle-3 {
-		width: 200px;
-		height: 200px;
-		top: 50%;
-		right: 50px;
+	.circle-label {
+		color: #6c757d;
+		font-size: 0.8rem;
+		text-align: center;
 	}
 
-	/* Animações */
-	@keyframes float {
-		0%,
-		100% {
-			transform: translateY(0);
+	.project-breakdown {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.breakdown-item {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-size: 0.9rem;
+		color: #495057;
+	}
+
+	.breakdown-dot {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* Calendar */
+	.calendar-section {
+		background: white;
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+		border: 1px solid #e9ecef;
+	}
+
+	.calendar-section h2 {
+		font-size: 1.25rem;
+		font-weight: 500;
+		color: #343a40;
+		margin: 0 0 1.5rem 0;
+	}
+
+	.calendar-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	.nav-btn {
+		background: none;
+		border: none;
+		font-size: 1.5rem;
+		color: #6c757d;
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+	}
+
+	.nav-btn:hover {
+		background: #f8f9fa;
+		color: #212529;
+	}
+
+	.month-year {
+		font-weight: 500;
+		color: #212529;
+	}
+
+	.calendar-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 2px;
+	}
+
+	.day-header {
+		text-align: center;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #6c757d;
+		padding: 0.5rem 0;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.calendar-day {
+		aspect-ratio: 1;
+		border: none;
+		background: none;
+		font-size: 0.85rem;
+		color: #495057;
+		cursor: pointer;
+		border-radius: 6px;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.calendar-day:hover {
+		background: #f8f9fa;
+	}
+
+	.calendar-day.other-month {
+		color: #adb5bd;
+	}
+
+	.calendar-day.today {
+		background: #212529;
+		color: white;
+		font-weight: 500;
+	}
+
+	.calendar-day.selected {
+		background: #007bff;
+		color: white;
+	}
+
+	.calendar-day.today.selected {
+		background: #212529;
+	}
+
+	/* Alert */
+	.alert {
+		background: #fff3cd;
+		color: #856404;
+		padding: 0.75rem 1rem;
+		border-radius: 6px;
+		font-size: 0.85rem;
+		margin-top: 1rem;
+		border: 1px solid #ffeaa7;
+		display: flex;
+		align-items: center;
+	}
+
+	/* Responsive */
+	@media (max-width: 768px) {
+		.dashboard {
+			padding: 1rem;
 		}
-		50% {
-			transform: translateY(-20px);
+
+		.greeting h1 {
+			font-size: 2rem;
 		}
-	}
 
-	.circle-1 {
-		animation: float 8s ease-in-out infinite;
-	}
+		.grid {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
 
-	.circle-2 {
-		animation: float 10s ease-in-out infinite 2s;
-	}
+		.summary-cards {
+			grid-template-columns: 1fr;
+		}
 
-	.circle-3 {
-		animation: float 6s ease-in-out infinite 1s;
+		.project-overview {
+			flex-direction: column;
+			text-align: center;
+		}
 	}
 </style>

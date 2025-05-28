@@ -42,10 +42,9 @@
 	const statusOptions: StatusTarefa[] = ['Pendente', 'Em Progresso', 'Concluída', 'Cancelada'];
 
 	onMount(() => {
-		tarefas.load(); // Garante o carregamento após montagem do componente
+		tarefas.load();
 	});
 
-	// Função para validar as datas
 	function validarDatas(): boolean {
 		erroValidacao = '';
 
@@ -59,7 +58,6 @@
 		return true;
 	}
 
-	// Função para filtrar tarefas com base no projeto selecionado
 	$: {
 		if (filtroProjetoId === 'todos') {
 			tarefasFiltradas = $tarefas;
@@ -113,9 +111,7 @@
 		}
 	};
 
-	// Configurar valores padrão para datas quando o componente for montado
 	onMount(() => {
-		// Definir data de início como hoje por padrão
 		dataInicio = new Date().toISOString().split('T')[0];
 	});
 
@@ -131,7 +127,6 @@
 </script>
 
 <div class="tarefas-container">
-	<!-- Cabeçalho -->
 	<header>
 		<h1>Minhas Tarefas</h1>
 		<div class="header-controls">
@@ -151,7 +146,6 @@
 		</div>
 	</header>
 
-	<!-- Estatísticas -->
 	<div class="estatisticas-container">
 		<div class="estatistica-card total">
 			<h3><BarChart size={18} /> Total</h3>
@@ -171,10 +165,8 @@
 		</div>
 	</div>
 
-	<!-- Quadro Kanban -->
 	<div class="quadro-kanban">
 		{#each statusOptions as status}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="coluna-status"
 				on:dragover={(e) => handleDragOver(e, status)}
@@ -205,31 +197,40 @@
 						in:fade
 					>
 						<div class="tarefa-header">
-							<span class="prioridade-dot {tarefa.prioridade}"></span>
-							{#if tarefa.dataFinal}
-								<span
-									class="data-vencimento {new Date(tarefa.dataFinal) < new Date()
-										? 'atrasada'
-										: ''}"
+							<div class="tarefa-info">
+								<span class="prioridade-dot {tarefa.prioridade}"></span>
+								<strong class="descricao">{tarefa.descricao}</strong>
+							</div>
+							<div class="tarefa-acoes">
+								<button class="btn-icon" on:click={() => editarTarefa(tarefa)}
+									><Edit size={16} /></button
 								>
-									<Flag size={14} /> Data Final: {formatarData(tarefa.dataFinal)}
-								</span>
-							{/if}
+								<button class="btn-icon danger" on:click={() => (tarefaParaExcluir = tarefa)}
+									><Trash2 size={16} /></button
+								>
+							</div>
 						</div>
 
-						<p class="descricao">{tarefa.descricao}</p>
-
-						{#if tarefa.dataInicio}
-							<div class="data-info">
-								<Calendar size={14} /> Início: {formatarData(tarefa.dataInicio)}
-							</div>
-						{/if}
-
-						{#if tarefa.dataPrevisao}
-							<div class="data-info">
-								<Target size={14} /> Previsão: {formatarData(tarefa.dataPrevisao)}
-							</div>
-						{/if}
+						<div class="tarefa-datas">
+							{#if tarefa.dataInicio}
+								<div class="data-info">
+									<Calendar size={14} /> Início: {formatarData(tarefa.dataInicio)}
+								</div>
+							{/if}
+							{#if tarefa.dataPrevisao}
+								<div class="data-info">
+									<Target size={14} /> Previsão: {formatarData(tarefa.dataPrevisao)}
+								</div>
+							{/if}
+							{#if tarefa.dataFinal}
+								<div class="data-info">
+									<Flag size={14} /> Final:
+									<span class={new Date(tarefa.dataFinal) < new Date() ? 'atrasada' : ''}>
+										{formatarData(tarefa.dataFinal)}
+									</span>
+								</div>
+							{/if}
+						</div>
 
 						{#if tarefa.projetoId}
 							<div class="projeto-tag">
@@ -237,15 +238,6 @@
 								{$projetos.find((p) => p.id === tarefa.projetoId)?.nome || 'Projeto desconhecido'}
 							</div>
 						{/if}
-
-						<div class="tarefa-acoes">
-							<button class="btn-icon" on:click={() => editarTarefa(tarefa)}
-								><Edit size={16} /></button
-							>
-							<button class="btn-icon danger" on:click={() => (tarefaParaExcluir = tarefa)}
-								><Trash2 size={16} /></button
-							>
-						</div>
 					</div>
 				{:else}
 					<div class="tarefa-vazia">Nenhuma tarefa aqui...</div>
@@ -254,7 +246,6 @@
 		{/each}
 	</div>
 
-	<!-- Modal de Edição/Adição -->
 	{#if tarefaEditando}
 		<div class="modal-overlay" on:click|self={fecharModal} transition:fade>
 			<div class="modal-content" transition:slide|local>
@@ -362,7 +353,6 @@
 		</div>
 	{/if}
 
-	<!-- Modal de Confirmação -->
 	{#if tarefaParaExcluir}
 		<div class="modal-overlay" on:click|self={fecharModal} transition:fade>
 			<div class="modal-content" transition:slide|local>
@@ -496,7 +486,7 @@
 
 	.tarefa {
 		background: white;
-		padding: 1rem;
+		padding: 1.2rem;
 		margin-bottom: 1rem;
 		border-radius: 4px;
 		box-shadow: var(--shadow);
@@ -506,6 +496,10 @@
 			box-shadow 0.2s;
 		position: relative;
 		border: 1px solid var(--border-color);
+		min-height: 160px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
 	.tarefa:hover {
@@ -521,8 +515,14 @@
 	.tarefa-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		margin-bottom: 0.5rem;
+	}
+
+	.tarefa-info {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.prioridade-dot {
@@ -530,7 +530,6 @@
 		height: 8px;
 		border-radius: 50%;
 		display: inline-block;
-		margin-right: 0.5rem;
 	}
 
 	.prioridade-dot.baixa {
@@ -543,26 +542,28 @@
 		background: var(--danger);
 	}
 
-	.data-vencimento {
-		font-size: 0.85rem;
-		color: var(--medium-gray);
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
+	.descricao {
+		font-weight: bold;
+		flex-grow: 1;
 	}
 
-	.data-vencimento.atrasada {
-		color: var(--danger);
-		font-weight: bold;
+	.tarefa-datas {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
 	}
 
 	.data-info {
 		font-size: 0.85rem;
 		color: var(--medium-gray);
-		margin-top: 0.25rem;
 		display: flex;
 		align-items: center;
 		gap: 0.25rem;
+	}
+
+	.data-info .atrasada {
+		color: var(--danger);
+		font-weight: bold;
 	}
 
 	.projeto-tag {
@@ -570,7 +571,7 @@
 		padding: 0.25rem 0.5rem;
 		border-radius: 2px;
 		font-size: 0.85rem;
-		margin-top: 0.5rem;
+		margin-top: auto;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.25rem;
@@ -578,9 +579,8 @@
 	}
 
 	.tarefa-acoes {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
+		display: flex;
+		gap: 0.25rem;
 		opacity: 0;
 		transition: opacity 0.2s;
 	}
@@ -594,7 +594,6 @@
 		border: none;
 		padding: 0.25rem;
 		cursor: pointer;
-		margin-left: 0.5rem;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -684,11 +683,6 @@
 	.input:focus {
 		border-color: var(--primary);
 		outline: none;
-	}
-
-	textarea.input {
-		resize: vertical;
-		min-height: 120px;
 	}
 
 	.modal-actions {

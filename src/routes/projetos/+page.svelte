@@ -1,3 +1,4 @@
+<!--routes/projetos/+page.svlete-->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
 	import { projetos, type Projeto } from '../../lib/stores/projetos';
