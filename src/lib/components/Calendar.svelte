@@ -2,7 +2,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { Calendar } from 'lucide-svelte';
-	import { reminders } from '$lib/stores/reminders'; // Importe a store de lembretes
+	import { reminders } from '$lib/stores/reminders';
 
 	let currentDate = new Date();
 	let selectedDate = null;
@@ -186,6 +186,7 @@
 				class:current-month={day.isCurrentMonth}
 				class:other-month={!day.isCurrentMonth}
 				class:today={day.isToday}
+				class:has-reminder={day.hasReminder}
 				on:click={() => day.isCurrentMonth && selectDate(day.date)}
 			>
 				<span class="day-number">{day.date.getDate()}</span>
@@ -265,6 +266,9 @@
 		--text: #222;
 		--border-color: #ddd;
 		--light-gray: #e0e0e0;
+		--reminder-color: #fff3b0; /* Nova cor para fundo de lembrete */
+		--reminder-border: #ffd54f; /* Cor da borda para lembrete */
+		--reminder-indicator: #ff9800; /* Cor do indicador de lembrete */
 	}
 
 	.page-header {
@@ -340,7 +344,7 @@
 		padding: 0.5rem;
 		position: relative;
 		cursor: pointer;
-		transition: background 0.2s ease;
+		transition: all 0.2s ease;
 		border: 1px solid var(--border-color);
 	}
 
@@ -356,6 +360,26 @@
 	.day-cell.today {
 		background: var(--light-gray);
 		font-weight: 600;
+		border: 2px solid var(--primary);
+	}
+
+	/* Estilo para dias com lembretes */
+	.day-cell.has-reminder {
+		background: linear-gradient(to bottom right, var(--reminder-color) 0%, #ffecb3 100%);
+		border-right: 2px solid var(--reminder-border);
+		border-bottom: 2px solid var(--reminder-border);
+	}
+
+	.day-cell.has-reminder:hover {
+		background: linear-gradient(to bottom right, #ffecb3 0%, #ffe082 100%);
+	}
+
+	.day-cell.other-month.has-reminder {
+		background: linear-gradient(
+			to bottom right,
+			rgba(255, 243, 176, 0.5) 0%,
+			rgba(255, 236, 153, 0.6) 100%
+		);
 	}
 
 	.day-number {
@@ -365,13 +389,16 @@
 	}
 
 	.reminder-indicator {
-		width: 6px;
-		height: 6px;
-		background: var(--primary);
+		width: 8px;
+		height: 8px;
+		background: var(--reminder-indicator);
 		border-radius: 50%;
 		position: absolute;
 		top: 0.5rem;
 		right: 0.5rem;
+		box-shadow:
+			0 0 0 2px white,
+			0 0 0 3px var(--reminder-indicator);
 	}
 
 	.monthly-reminders {

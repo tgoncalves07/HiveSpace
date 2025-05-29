@@ -305,20 +305,6 @@
 </div>
 
 <style>
-	:root {
-		--primary: #333;
-		--secondary: #555;
-		--background: #f5f5f5;
-		--text: #222;
-		--success: #444;
-		--warning: #666;
-		--danger: #000;
-		--light-gray: #e0e0e0;
-		--medium-gray: #999;
-		--shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		--border-color: #ddd;
-	}
-
 	.tarefas-container {
 		max-width: 1200px;
 		margin: 0 auto;

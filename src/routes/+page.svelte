@@ -14,6 +14,7 @@
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
+	import { Sunset } from 'lucide-svelte';
 
 	// Estado do calendário
 	let currentDate = new Date();
@@ -77,17 +78,17 @@
 		}
 	}
 
-	// Obter saudação baseada na hora
 	function getGreeting() {
 		const hour = new Date().getHours();
+		if (hour < 7) return 'Boa noite';
 		if (hour < 12) return 'Bom dia';
 		if (hour < 18) return 'Boa tarde';
 		return 'Boa noite';
 	}
 
-	// Obter ícone de saudação
 	function getGreetingIcon() {
 		const hour = new Date().getHours();
+		if (hour < 7) return Moon;
 		if (hour < 12) return Sun;
 		if (hour < 18) return Sun;
 		return Moon;
@@ -132,7 +133,7 @@
 			<div>
 				<h1>{getGreeting()}</h1>
 				<p class="date">
-					{new Date().toLocaleDateString('pt-BR', {
+					{new Date().toLocaleDateString('pt-PT', {
 						weekday: 'long',
 						year: 'numeric',
 						month: 'long',

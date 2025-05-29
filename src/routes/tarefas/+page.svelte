@@ -47,10 +47,34 @@
 
 	function validarDatas(): boolean {
 		erroValidacao = '';
+		let projeto: Projeto | undefined = undefined;
 
+		// Obter o projeto selecionado se existir
+		if (projetoSelecionado !== 'sem-projeto') {
+			projeto = $projetos.find((p) => p.id === projetoSelecionado);
+		}
+
+		// Validação 1: dataPrevisao não pode ser posterior à dataFinal
 		if (dataPrevisao && dataFinal) {
 			if (new Date(dataPrevisao) > new Date(dataFinal)) {
 				erroValidacao = 'A data de previsão não pode ser posterior à data final!';
+				return false;
+			}
+		}
+
+		// Validação 2: dataPrevisao não pode ser posterior à data de prazo do projeto
+		if (projeto && projeto.dataPrazo) {
+			const dataPrazoProjeto = new Date(projeto.dataPrazo);
+
+			// Verificar data de previsão
+			if (dataPrevisao && new Date(dataPrevisao) > dataPrazoProjeto) {
+				erroValidacao = `A data de previsão não pode ser posterior à data de prazo do projeto (${formatarData(projeto.dataPrazo)})!`;
+				return false;
+			}
+
+			// Verificar data final
+			if (dataFinal && new Date(dataFinal) > dataPrazoProjeto) {
+				erroValidacao = `A data final não pode ser posterior à data de prazo do projeto (${formatarData(projeto.dataPrazo)})!`;
 				return false;
 			}
 		}
@@ -87,6 +111,7 @@
 
 	const editarTarefa = (tarefa: Tarefa) => {
 		tarefaEditando = { ...tarefa };
+		projetoSelecionado = tarefa.projetoId ? tarefa.projetoId : 'sem-projeto';
 		if (tarefa.dataFinal) {
 			dataFinal = new Date(tarefa.dataFinal).toISOString().split('T')[0];
 		} else {
@@ -123,6 +148,7 @@
 	function fecharModal() {
 		tarefaEditando = null;
 		tarefaParaExcluir = null;
+		erroValidacao = '';
 	}
 </script>
 
@@ -255,7 +281,7 @@
 				</div>
 				<form
 					on:submit|preventDefault={() => {
-						if (!tarefaEditando.descricao.trim()) {
+						if (!tarefaEditando.descricao?.trim()) {
 							erroValidacao = 'A descrição da tarefa é obrigatória!';
 							return;
 						}
@@ -275,7 +301,7 @@
 							tarefas.adicionarTarefa({
 								descricao: tarefaEditando.descricao,
 								projetoId: projetoSelecionado !== 'sem-projeto' ? projetoSelecionado : undefined,
-								prioridade: tarefaEditando.prioridade,
+								prioridade: tarefaEditando.prioridade || 'media',
 								status: 'Pendente',
 								dataInicio: dataInicio || undefined,
 								dataPrevisao: dataPrevisao || undefined,
@@ -283,7 +309,6 @@
 							});
 						}
 						fecharModal();
-						erroValidacao = '';
 					}}
 				>
 					<div class="form-grid">
@@ -342,6 +367,14 @@
 							/>
 						</div>
 					</div>
+
+					{#if erroValidacao}
+						<div class="erro-validacao">
+							<AlertCircle size={18} />
+							{erroValidacao}
+						</div>
+					{/if}
+
 					<div class="modal-actions">
 						<button type="submit" class="btn-primary">
 							{tarefaEditando.id ? 'Atualizar' : 'Adicionar'}
@@ -374,20 +407,6 @@
 </div>
 
 <style>
-	:root {
-		--primary: #333;
-		--secondary: #555;
-		--background: #f5f5f5;
-		--text: #222;
-		--success: #444;
-		--warning: #666;
-		--danger: #000;
-		--light-gray: #e0e0e0;
-		--medium-gray: #999;
-		--shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		--border-color: #ddd;
-	}
-
 	.tarefas-container {
 		max-width: 1200px;
 		margin: 0 auto;
@@ -753,6 +772,18 @@
 
 	.btn-danger:hover {
 		background: #b30000;
+	}
+
+	.erro-validacao {
+		color: var(--danger);
+		background-color: #fff0f0;
+		padding: 0.75rem;
+		border-radius: 4px;
+		margin-top: 1rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-left: 3px solid var(--danger);
 	}
 
 	@media (max-width: 768px) {

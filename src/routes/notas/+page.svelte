@@ -22,15 +22,18 @@
 		AlertTriangle
 	} from 'lucide-svelte';
 
-	let currentNote = { id: '', title: '', content: '' };
+	let currentNote = { id: '', title: '', description: '', content: '' };
 	let showModal = false;
 	let isEditing = false;
 	let searchTerm = '';
 	let notaParaExcluir = null;
+	let viewingNote = null;
+	let expandedNoteId = null;
 
 	$: filteredNotes = $notesStore.filter(
 		(note) =>
 			note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			note.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			note.content.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 
@@ -38,9 +41,14 @@
 		if (!currentNote.title || !currentNote.content) return;
 
 		if (isEditing) {
-			notesStore.updateNote(currentNote.id, currentNote.title, currentNote.content);
+			notesStore.updateNote(
+				currentNote.id,
+				currentNote.title,
+				currentNote.description,
+				currentNote.content
+			);
 		} else {
-			notesStore.addNote(currentNote.title, currentNote.content);
+			notesStore.addNote(currentNote.title, currentNote.description, currentNote.content);
 		}
 
 		closeModal();
@@ -58,7 +66,7 @@
 		showModal = true;
 	}
 
-	function solicitarExclusao(note) {
+	function solicitarExcluir(note) {
 		notaParaExcluir = note;
 	}
 
@@ -66,12 +74,12 @@
 		if (notaParaExcluir) {
 			notesStore.deleteNote(notaParaExcluir.id);
 			notaParaExcluir = null;
-			if (currentNote.id === notaParaExcluir.id) closeModal();
+			if (currentNote.id === notaParaExcluir?.id) closeModal();
 		}
 	}
 
 	function resetForm() {
-		currentNote = { id: '', title: '', content: '' };
+		currentNote = { id: '', title: '', description: '', content: '' };
 	}
 
 	function closeModal() {
@@ -83,10 +91,17 @@
 		const date = new Date(dateString);
 		return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 	}
+
+	function toggleNoteExpansion(note) {
+		if (expandedNoteId === note.id) {
+			expandedNoteId = null;
+		} else {
+			expandedNoteId = note.id;
+		}
+	}
 </script>
 
 <div class="tarefas-container">
-	<!-- Cabeçalho -->
 	<header>
 		<h1>Minhas Notas</h1>
 		<div class="header-controls">
@@ -100,7 +115,6 @@
 		</div>
 	</header>
 
-	<!-- Estatísticas -->
 	<div class="estatisticas-container">
 		<div class="estatistica-card total">
 			<h3><BarChart size={18} /> Total</h3>
@@ -124,7 +138,6 @@
 		</div>
 	</div>
 
-	<!-- Lista de Notas -->
 	<div class="notes-list">
 		<h2>Notas ({filteredNotes.length})</h2>
 		{#if filteredNotes.length === 0}
@@ -132,21 +145,26 @@
 		{:else}
 			<div class="notes-grid">
 				{#each filteredNotes as note (note.id)}
-					<div class="note-item" transition:slide|local>
+					<div class="note-item" on:click={() => toggleNoteExpansion(note)} transition:slide|local>
 						<div class="note-header">
 							<h3>{note.title}</h3>
-							<div class="note-actions">
+							<div class="note-actions" on:click|stopPropagation>
 								<button class="btn-icon" on:click={() => openEditModal(note)}>
 									<Edit size={18} stroke-width="1.5" />
 								</button>
-								<button class="btn-icon danger" on:click={() => solicitarExclusao(note)}>
+								<button class="btn-icon danger" on:click={() => solicitarExcluir(note)}>
 									<Trash2 size={18} stroke-width="1.5" />
 								</button>
 							</div>
 						</div>
-						<div class="note-content">
-							<p>{note.content}</p>
+						<div class="note-description">
+							<p>{note.description}</p>
 						</div>
+						{#if expandedNoteId === note.id}
+							<div class="note-content-expanded">
+								<p>{note.content}</p>
+							</div>
+						{/if}
 						<div class="note-footer">
 							<div class="data-info">
 								<Clock size={14} /> Criado em: {formatDate(note.createdAt)}
@@ -163,7 +181,6 @@
 		{/if}
 	</div>
 
-	<!-- Modal de Edição/Adição -->
 	{#if showModal}
 		<div class="modal-overlay" on:click|self={closeModal} transition:fade>
 			<div class="modal-content" transition:slide|local>
@@ -184,11 +201,22 @@
 								class="input"
 							/>
 						</div>
+						<div class="input-container">
+							<label for="description"><FileText size={16} /> Descrição</label>
+							<input
+								type="text"
+								id="description"
+								placeholder="Descrição"
+								bind:value={currentNote.description}
+								required
+								class="input"
+							/>
+						</div>
 						<div class="input-container required">
 							<label for="content"><FileText size={16} /> Conteúdo</label>
 							<textarea
 								id="content"
-								placeholder="Conteúdo da nota"
+								placeholder="Conteúdo"
 								bind:value={currentNote.content}
 								rows="6"
 								required
@@ -207,19 +235,53 @@
 		</div>
 	{/if}
 
-	<!-- Modal de Confirmação de Exclusão -->
+	{#if viewingNote}
+		<div class="modal-overlay" on:click|self={() => (viewingNote = null)} transition:fade>
+			<div class="modal-content" transition:slide|local>
+				<div class="modal-header">
+					<h2>{viewingNote.title}</h2>
+					<button class="close-btn" on:click={() => (viewingNote = null)}>&times;</button>
+				</div>
+				<div class="note-view-description">
+					<p>{viewingNote.description}</p>
+				</div>
+				<div class="note-view-content">
+					<p>{viewingNote.content}</p>
+				</div>
+				<div class="note-view-footer">
+					<div class="data-info">
+						<Clock size={14} /> Criado em: {formatDate(viewingNote.createdAt)}
+					</div>
+					{#if viewingNote.updatedAt}
+						<div class="data-info">
+							<CheckCircle size={14} /> Atualizado em: {formatDate(viewingNote.updatedAt)}
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Modal de Confirmação de Exclusão Atualizado -->
 	{#if notaParaExcluir}
 		<div class="modal-overlay" on:click|self={() => (notaParaExcluir = null)} transition:fade>
 			<div class="modal-content" transition:slide|local>
 				<h2><AlertTriangle size={24} /> Confirmar Exclusão</h2>
-				<p>Tem certeza que deseja excluir a nota "<strong>{notaParaExcluir.title}</strong>"?</p>
-				<p class="aviso-exclusao">Esta ação é irreversível e excluirá a nota permanentemente!</p>
+				<p>
+					Tem certeza que deseja excluir a nota "<strong>{notaParaExcluir.title}</strong>"?
+				</p>
+				<p class="aviso-exclusao">Esta ação é irreversível e excluirá todos os dados da nota!</p>
 
 				<div class="modal-actions">
 					<button class="btn-secondary" on:click={() => (notaParaExcluir = null)}>
 						Cancelar
 					</button>
-					<button class="btn-danger" on:click={confirmarExclusao}>
+					<button
+						class="btn-danger"
+						on:click={() => {
+							confirmarExclusao();
+						}}
+					>
 						<Trash2 size={16} /> Confirmar Exclusão
 					</button>
 				</div>
@@ -229,20 +291,6 @@
 </div>
 
 <style>
-	:root {
-		--primary: #333;
-		--secondary: #555;
-		--background: #f5f5f5;
-		--text: #222;
-		--success: #444;
-		--warning: #666;
-		--danger: #000;
-		--light-gray: #e0e0e0;
-		--medium-gray: #999;
-		--shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		--border-color: #ddd;
-	}
-
 	.tarefas-container {
 		max-width: 1200px;
 		margin: 0 auto;
@@ -355,6 +403,8 @@
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
+		cursor: pointer;
+		position: relative;
 	}
 
 	.note-item:hover {
@@ -367,7 +417,6 @@
 		justify-content: space-between;
 		align-items: flex-start;
 		margin-bottom: 10px;
-		position: relative;
 	}
 
 	.note-header h3 {
@@ -382,6 +431,7 @@
 		gap: 8px;
 		opacity: 0;
 		transition: opacity 0.2s;
+		z-index: 10;
 	}
 
 	.note-item:hover .note-actions {
@@ -407,14 +457,24 @@
 		color: var(--danger);
 	}
 
-	.note-content {
+	.note-description {
 		flex-grow: 1;
 		color: var(--text);
 		white-space: pre-line;
 		overflow: hidden;
 		display: -webkit-box;
-		-webkit-line-clamp: 4;
+		-webkit-line-clamp: 3;
 		-webkit-box-orient: vertical;
+		margin-bottom: 10px;
+		font-size: 0.9em;
+		line-height: 1.4;
+	}
+
+	.note-content-expanded {
+		margin-top: 15px;
+		padding-top: 15px;
+		border-top: 1px dashed #ddd;
+		white-space: pre-line;
 	}
 
 	.note-footer {
@@ -563,7 +623,6 @@
 		background: #d0d0d0;
 	}
 
-	/* Estilos para o modal de confirmação de exclusão */
 	.aviso-exclusao {
 		color: var(--danger);
 		background-color: #fff0f0;
@@ -588,6 +647,28 @@
 
 	.btn-danger:hover {
 		background: #b30000;
+	}
+
+	.note-view-description {
+		font-style: italic;
+		color: #555;
+		margin-bottom: 20px;
+		padding-bottom: 10px;
+		border-bottom: 1px solid #eee;
+	}
+
+	.note-view-content {
+		white-space: pre-line;
+		line-height: 1.6;
+	}
+
+	.note-view-footer {
+		margin-top: 20px;
+		font-size: 0.85rem;
+		color: #777;
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
 	}
 
 	@media (max-width: 768px) {

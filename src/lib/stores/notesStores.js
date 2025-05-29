@@ -10,10 +10,11 @@ function createNotesStore() {
 	return {
 		subscribe,
 		// Adicionar nova nota
-		addNote: (title, content) => {
+		addNote: (title, description, content) => {
 			const newNote = {
 				id: Date.now().toString(),
 				title,
+				description, // Novo campo
 				content,
 				createdAt: new Date().toISOString()
 			};
@@ -25,13 +26,14 @@ function createNotesStore() {
 			});
 		},
 		// Atualizar nota existente
-		updateNote: (id, title, content) => {
+		updateNote: (id, title, description, content) => {
 			update((notes) => {
 				const noteIndex = notes.findIndex((note) => note.id === id);
 				if (noteIndex !== -1) {
 					const updatedNote = {
 						...notes[noteIndex],
 						title,
+						description, // Novo campo
 						content,
 						updatedAt: new Date().toISOString()
 					};
