@@ -1,30 +1,135 @@
-<!--routes/projetos/+page.svlete-->
+<!-- routes/projetos/+page.svelte -->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
-	import { projetos, type Projeto } from '../../lib/stores/projetos';
+	import { projetos as projetosStore, type Projeto } from '../../lib/stores/projetos'; // Mantém a store original de projetos
 	import { onMount } from 'svelte';
+	import { derived } from 'svelte/store'; // ESSENCIAL para a store 't' local
 	import {
 		Plus,
 		Calendar,
 		Clock,
 		Flag,
-		CheckSquare,
-		Folder,
-		FolderOpen,
-		PieChart,
 		Edit,
 		Trash2,
 		AlertTriangle,
 		BarChart,
 		Target,
 		CheckCircle,
-		X,
+		X, // Para botão de fechar modal
 		AlertCircle,
 		FileText,
-		List,
 		Activity,
 		Filter
 	} from 'lucide-svelte';
+
+	// 1. Importar APENAS a store 'configuracoes' de pageStore.ts
+	//    A store 't' será definida localmente.
+	import { configuracoes } from '../../lib/stores/pageStore'; // VERIFIQUE ESTE CAMINHO
+
+	// 2. DICIONÁRIO DE TRADUÇÕES LOCAL para esta página (Projetos)
+	//    Certifique-se que TODAS as chaves usadas no template abaixo estão aqui.
+	const projectTranslations = {
+		pt: {
+			'projetos.tituloPagina': 'Meus Projetos',
+			'projetos.filtro.todosStatus': 'Todos os Status',
+			'projetos.botao.novo': 'Novo Projeto',
+			'projetos.stats.total': 'Total de Projetos',
+			'projetos.stats.finalizados': 'Projetos Finalizados',
+			'projetos.stats.atrasados': 'Projetos Atrasados',
+			'projetos.coluna.ideia': 'Ideia',
+			'projetos.coluna.pendente': 'Pendente',
+			'projetos.coluna.emProcesso': 'Em Processo',
+			'projetos.coluna.finalizado': 'Finalizado',
+			'projetos.card.editarAria': 'Editar Projeto',
+			'projetos.card.excluirAria': 'Excluir Projeto',
+			'projetos.card.detalhes.inicio': 'Início',
+			'projetos.card.detalhes.prazo': 'Prazo',
+			'projetos.card.dataNaoDisponivel': 'N/D',
+			'projetos.card.dataInvalida': 'Data Inválida',
+			'projetos.coluna.vazia': 'Nenhum projeto neste status.',
+			'projetos.modal.editar.titulo': 'Editar Projeto',
+			'projetos.modal.adicionar.titulo': 'Adicionar Novo Projeto',
+			'projetos.modal.fecharAria': 'Fechar modal',
+			'projetos.modal.form.nomeLabel': 'Nome do Projeto',
+			'projetos.modal.form.nomePlaceholder': 'Ex: Lançamento Alpha',
+			'projetos.modal.form.descricaoLabel': 'Descrição (Opcional)',
+			'projetos.modal.form.descricaoPlaceholder': 'Detalhes sobre o projeto...',
+			'projetos.modal.form.statusLabel': 'Status',
+			'projetos.modal.form.dataInicioLabel': 'Data de Início',
+			'projetos.modal.form.dataPrazoLabel': 'Data de Prazo',
+			'projetos.modal.form.salvar': 'Salvar Alterações',
+			'projetos.modal.form.criar': 'Criar Projeto',
+			'projetos.modal.form.cancelar': 'Cancelar',
+			'projetos.modal.validacao.nomeObrigatorio': 'O nome do projeto é obrigatório.',
+			'projetos.modal.validacao.prazoInvalido':
+				'A data de prazo não pode ser anterior à data de início.',
+			'projetos.modal.excluir.titulo': 'Confirmar Exclusão',
+			'projetos.modal.excluir.mensagem':
+				'Tem certeza que deseja excluir o projeto "{projectName}"?',
+			'projetos.modal.excluir.aviso': 'Esta ação não poderá ser desfeita.',
+			'projetos.modal.excluir.confirmar': 'Excluir Projeto'
+		},
+		en: {
+			'projetos.tituloPagina': 'My Projects',
+			'projetos.filtro.todosStatus': 'All Statuses',
+			'projetos.botao.novo': 'New Project',
+			'projetos.stats.total': 'Total Projects',
+			'projetos.stats.finalizados': 'Completed Projects',
+			'projetos.stats.atrasados': 'Overdue Projects',
+			'projetos.coluna.ideia': 'Idea',
+			'projetos.coluna.pendente': 'Pending',
+			'projetos.coluna.emProcesso': 'In Progress',
+			'projetos.coluna.finalizado': 'Completed',
+			'projetos.card.editarAria': 'Edit Project',
+			'projetos.card.excluirAria': 'Delete Project',
+			'projetos.card.detalhes.inicio': 'Start',
+			'projetos.card.detalhes.prazo': 'Deadline',
+			'projetos.card.dataNaoDisponivel': 'N/A',
+			'projetos.card.dataInvalida': 'Invalid Date',
+			'projetos.coluna.vazia': 'No projects in this status.',
+			'projetos.modal.editar.titulo': 'Edit Project',
+			'projetos.modal.adicionar.titulo': 'Add New Project',
+			'projetos.modal.fecharAria': 'Close modal',
+			'projetos.modal.form.nomeLabel': 'Project Name',
+			'projetos.modal.form.nomePlaceholder': 'E.g., Alpha Release',
+			'projetos.modal.form.descricaoLabel': 'Description (Optional)',
+			'projetos.modal.form.descricaoPlaceholder': 'Details about the project...',
+			'projetos.modal.form.statusLabel': 'Status',
+			'projetos.modal.form.dataInicioLabel': 'Start Date',
+			'projetos.modal.form.dataPrazoLabel': 'Deadline Date',
+			'projetos.modal.form.salvar': 'Save Changes',
+			'projetos.modal.form.criar': 'Create Project',
+			'projetos.modal.form.cancelar': 'Cancel',
+			'projetos.modal.validacao.nomeObrigatorio': 'Project name is required.',
+			'projetos.modal.validacao.prazoInvalido':
+				'The deadline date cannot be earlier than the start date.',
+			'projetos.modal.excluir.titulo': 'Confirm Deletion',
+			'projetos.modal.excluir.mensagem':
+				'Are you sure you want to delete the project "{projectName}"?',
+			'projetos.modal.excluir.aviso': 'This action cannot be undone.',
+			'projetos.modal.excluir.confirmar': 'Delete Project'
+		}
+		// Adicionar outros idiomas aqui, se necessário
+	};
+
+	// 3. Store derivada 't' LOCAL, exatamente como na sua página de Notas.
+	const t = derived(configuracoes, ($cfg) => {
+		return (key: string, replacements?: Record<string, string | number>): string => {
+			const selectedLang = $cfg.idioma;
+			let langDict =
+				projectTranslations[selectedLang as keyof typeof projectTranslations] ||
+				projectTranslations.pt;
+			let text = langDict?.[key] || projectTranslations.pt?.[key] || key;
+
+			if (replacements) {
+				for (const k in replacements) {
+					text = text.replace(new RegExp(`{${k}}`, 'g'), String(replacements[k]));
+				}
+			}
+			return text;
+		};
+	});
+	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	type Status = 'Ideia' | 'Pendente' | 'Em Processo' | 'Finalizado';
 
@@ -39,10 +144,20 @@
 	let status: Status = 'Ideia';
 	let dataInicio = '';
 	let dataPrazo = '';
-	let erro = '';
+	let erroValidacao = '';
+
+	// Os labels dos statusOptions agora vêm das traduções e são reativos
+	$: statusOptions = [
+		{ value: 'Ideia' as Status, label: $t('projetos.coluna.ideia'), icon: Clock },
+		{ value: 'Pendente' as Status, label: $t('projetos.coluna.pendente'), icon: Activity },
+		{ value: 'Em Processo' as Status, label: $t('projetos.coluna.emProcesso'), icon: CheckCircle },
+		{ value: 'Finalizado' as Status, label: $t('projetos.coluna.finalizado'), icon: Flag }
+	];
 
 	onMount(() => {
-		dataInicio = new Date().toISOString().split('T')[0];
+		if (!editando) {
+			dataInicio = new Date().toISOString().split('T')[0];
+		}
 	});
 
 	const resetForm = () => {
@@ -53,250 +168,337 @@
 		dataPrazo = '';
 		projetoId = null;
 		editando = false;
-		erro = '';
+		erroValidacao = '';
 	};
 
-	function abrirNovoProjeto() {
+	function abrirNovoProjetoModal() {
 		resetForm();
 		showModal = true;
 	}
 
-	function editarProjeto(p) {
+	function editarProjetoModal(p: Projeto) {
 		nome = p.nome;
-		descricao = p.descricao;
+		descricao = p.descricao || '';
 		status = p.status;
-		dataInicio = p.dataInicio || '';
-		dataPrazo = p.dataPrazo || '';
+		dataInicio = p.dataInicio ? new Date(p.dataInicio).toISOString().split('T')[0] : '';
+		dataPrazo = p.dataPrazo ? new Date(p.dataPrazo).toISOString().split('T')[0] : '';
 		projetoId = p.id;
 		editando = true;
 		showModal = true;
+		erroValidacao = '';
 	}
 
 	function salvarProjeto() {
+		erroValidacao = '';
 		if (!nome.trim()) {
-			erro = 'Nome obrigatório.';
+			erroValidacao = $t('projetos.modal.validacao.nomeObrigatorio');
 			return;
 		}
-		if (dataPrazo && new Date(dataPrazo) < new Date(dataInicio)) {
-			erro = 'Prazo não pode ser anterior ao início.';
+		if (dataInicio && dataPrazo && new Date(dataPrazo) < new Date(dataInicio)) {
+			erroValidacao = $t('projetos.modal.validacao.prazoInvalido');
 			return;
 		}
 
-		const novoProjeto = {
-			id: projetoId ?? Date.now(),
-			nome,
-			descricao,
+		const projetoData: Omit<Projeto, 'id'> = {
+			nome: nome.trim(),
+			descricao: descricao.trim(),
 			status,
-			dataInicio,
-			dataPrazo
+			dataInicio: dataInicio || undefined,
+			dataPrazo: dataPrazo || undefined
 		};
 
-		projetos.update((lista) => {
-			if (editando && projetoId !== null) {
-				return lista.map((p) => (p.id === projetoId ? novoProjeto : p));
-			}
-			return [...lista, novoProjeto];
-		});
+		if (editando && projetoId !== null) {
+			projetosStore.updateProjeto(projetoId, projetoData);
+		} else {
+			projetosStore.addProjeto(projetoData);
+		}
 
 		showModal = false;
 		resetForm();
 	}
 
-	function excluirProjeto(id: number) {
-		projetos.update((lista) => lista.filter((p) => p.id !== id));
+	function confirmarExclusao() {
+		if (projetoParaExcluir) {
+			projetosStore.removeProjeto(projetoParaExcluir.id);
+			projetoParaExcluir = null;
+		}
 	}
 
-	const formatarData = (data: string) => (data ? new Date(data).toLocaleDateString('pt-BR') : '');
+	const formatarDataDisplay = (dataString?: string): string => {
+		if (!dataString) return $t('projetos.card.dataNaoDisponivel');
+		try {
+			let langTag = $configuracoes.idioma || 'pt'; // Usa o idioma da store global
+			if (langTag === 'pt') langTag = 'pt-PT';
+			else if (langTag === 'en')
+				langTag = 'en-GB'; // Formato comum para DD/MM/YYYY em inglês
+			else if (langTag === 'es') langTag = 'es-ES';
+			else if (langTag === 'fr') langTag = 'fr-FR';
+
+			return new Date(dataString).toLocaleDateString(langTag, {
+				day: '2-digit',
+				month: '2-digit',
+				year: 'numeric'
+			});
+		} catch (e) {
+			console.warn('Erro ao formatar data display:', e);
+			return $t('projetos.card.dataInvalida');
+		}
+	};
+
+	function fecharModal() {
+		showModal = false;
+		projetoParaExcluir = null;
+		erroValidacao = '';
+		if (!editando) resetForm();
+	}
 
 	$: projetosFiltrados =
-		filtro === 'todos' ? $projetos : $projetos.filter((p) => p.status === filtro);
+		filtro === 'todos' ? $projetosStore : $projetosStore.filter((p) => p.status === filtro);
 
-	$: atrasados = $projetos.filter(
+	$: projetosAtrasados = $projetosStore.filter(
 		(p) => p.dataPrazo && new Date(p.dataPrazo) < new Date() && p.status !== 'Finalizado'
 	);
+
+	// $: if ($configuracoes) { // Para depuração, se necessário
+	// 	console.log('[PROJETOS] Idioma da store configuracoes:', $configuracoes.idioma);
+	// 	console.log('[PROJETOS] Titulo Traduzido ($t):', $t('projetos.tituloPagina'));
+	// }
 </script>
 
-<div class="tarefas-container">
-	<!-- Cabeçalho -->
-	<header>
-		<h1>Projetos</h1>
-		<div class="header-controls">
-			<div class="search-container">
+<!-- O TEMPLATE HTML abaixo já está traduzido usando as chaves definidas em projectTranslations -->
+<div class="page-container">
+	<header class="page-header">
+		<h1 class="page-title">{$t('projetos.tituloPagina')}</h1>
+		<div class="header-actions">
+			<div class="filter-control">
 				<Filter size={18} />
-				<select id="filtro-projeto" bind:value={filtro} class="input">
-					<option value="todos">Todos</option>
-					<option value="Ideia">Ideia</option>
-					<option value="Pendente">Pendente</option>
-					<option value="Em Processo">Em Processo</option>
-					<option value="Finalizado">Finalizado</option>
+				<select id="filtro-status-projeto" bind:value={filtro} class="input-field minimal">
+					<option value="todos">{$t('projetos.filtro.todosStatus')}</option>
+					{#each statusOptions as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
 				</select>
 			</div>
-			<button class="btn-primary" on:click={abrirNovoProjeto}>
-				<Plus size={18} stroke-width="2" /> Novo Projeto
+			<button class="button primary-button" on:click={abrirNovoProjetoModal}>
+				<Plus size={18} />
+				{$t('projetos.botao.novo')}
 			</button>
 		</div>
 	</header>
 
-	<!-- Estatísticas -->
-	<div class="estatisticas-container">
-		<div class="estatistica-card total">
-			<h3><BarChart size={18} /> Total</h3>
-			<span>{$projetos.length}</span>
+	<div class="stats-overview-container">
+		<div class="stat-card">
+			<BarChart size={20} class="stat-icon total-icon" />
+			<div class="stat-content">
+				<span class="stat-value">{$projetosStore.length}</span>
+				<span class="stat-label">{$t('projetos.stats.total')}</span>
+			</div>
 		</div>
-		<div class="estatistica-card alta">
-			<h3><Flag size={18} /> Finalizados</h3>
-			<span>{$projetos.filter((p) => p.status === 'Finalizado').length}</span>
+		<div class="stat-card">
+			<Flag size={20} class="stat-icon high-priority-icon" />
+			<div class="stat-content">
+				<span class="stat-value"
+					>{$projetosStore.filter((p) => p.status === 'Finalizado').length}</span
+				>
+				<span class="stat-label">{$t('projetos.stats.finalizados')}</span>
+			</div>
 		</div>
-		<div class="estatistica-card atrasadas">
-			<h3><AlertCircle size={18} /> Atrasados</h3>
-			<span>{atrasados.length}</span>
+		<div class="stat-card">
+			<AlertCircle size={20} class="stat-icon overdue-icon" />
+			<div class="stat-content">
+				<span class="stat-value">{projetosAtrasados.length}</span>
+				<span class="stat-label">{$t('projetos.stats.atrasados')}</span>
+			</div>
 		</div>
 	</div>
 
-	<!-- Quadro Kanban -->
-	<div class="quadro-kanban">
-		{#each ['Ideia', 'Pendente', 'Em Processo', 'Finalizado'] as st}
-			<div class="coluna-status">
-				<h3 class="coluna-titulo">
-					{#if st === 'Ideia'}
-						<Clock size={18} />
-					{:else if st === 'Pendente'}
-						<Activity size={18} />
-					{:else if st === 'Em Processo'}
-						<CheckCircle size={18} />
-					{:else}
-						<X size={18} />
-					{/if}
-					{st}
-					<small>
-						({projetosFiltrados.filter((p) => p.status === st).length})
-					</small>
+	<div class="kanban-board-grid">
+		{#each statusOptions as statusOpt (statusOpt.value)}
+			<div class="status-column" data-status={statusOpt.value}>
+				<h3 class="column-header">
+					<svelte:component this={statusOpt.icon} size={18} />
+					<span class="column-title-text">{statusOpt.label}</span>
+					<span class="column-task-count">
+						({projetosFiltrados.filter((p) => p.status === statusOpt.value).length})
+					</span>
 				</h3>
-
-				{#each projetosFiltrados.filter((p) => p.status === st) as p (p.id)}
-					<div class="tarefa" in:fade>
-						<div class="tarefa-header">
-							<span class="prioridade-dot"></span>
-							<h4 class="titulo-projeto">{p.nome}</h4>
-						</div>
-
-						<p class="descricao">{p.descricao}</p>
-
-						{#if p.dataInicio}
-							<div class="data-info">
-								<Calendar size={14} /> Início: {formatarData(p.dataInicio)}
+				<div class="tasks-list">
+					{#each projetosFiltrados.filter((p) => p.status === statusOpt.value) as projeto (projeto.id)}
+						<div class="tarefa-card" in:fade={{ duration: 200 }} out:fade={{ duration: 150 }}>
+							<div class="tarefa-card-header">
+								<div class="tarefa-identifier">
+									<strong class="tarefa-description">{projeto.nome}</strong>
+								</div>
+								<div class="tarefa-action-buttons">
+									<button
+										class="icon-button"
+										on:click={() => editarProjetoModal(projeto)}
+										aria-label={$t('projetos.card.editarAria')}
+									>
+										<Edit size={16} />
+									</button>
+									<button
+										class="icon-button danger"
+										on:click={() => (projetoParaExcluir = projeto)}
+										aria-label={$t('projetos.card.excluirAria')}
+									>
+										<Trash2 size={16} />
+									</button>
+								</div>
 							</div>
-						{/if}
 
-						{#if p.dataPrazo}
-							<div class="data-info">
-								<Flag size={14} /> Prazo: {formatarData(p.dataPrazo)}
+							{#if projeto.descricao}
+								<p class="project-description">{projeto.descricao}</p>
+							{/if}
+
+							<div class="tarefa-details-grid">
+								{#if projeto.dataInicio}
+									<div class="detail-item">
+										<Calendar size={14} />
+										<span
+											>{$t('projetos.card.detalhes.inicio')}: {formatarDataDisplay(
+												projeto.dataInicio
+											)}</span
+										>
+									</div>
+								{/if}
+								{#if projeto.dataPrazo}
+									<div class="detail-item final-date-item">
+										<Flag size={14} />
+										<span
+											>{$t('projetos.card.detalhes.prazo')}:
+											<span
+												class:overdue-text={new Date(projeto.dataPrazo) < new Date() &&
+													projeto.status !== 'Finalizado'}
+											>
+												{formatarDataDisplay(projeto.dataPrazo)}
+											</span>
+										</span>
+									</div>
+								{/if}
 							</div>
-						{/if}
-
-						<div class="tarefa-acoes">
-							<button class="btn-icon" on:click={() => editarProjeto(p)}><Edit size={16} /></button>
-							<button class="btn-icon danger" on:click={() => (projetoParaExcluir = p)}
-								><Trash2 size={16} /></button
-							>
 						</div>
-					</div>
-				{:else}
-					<div class="tarefa-vazia">Nenhum projeto aqui...</div>
-				{/each}
+					{:else}
+						<div class="empty-column-message">{$t('projetos.coluna.vazia')}</div>
+					{/each}
+				</div>
 			</div>
 		{/each}
 	</div>
 
-	<!-- Modal de Edição/Adição -->
 	{#if showModal}
-		<div class="modal-overlay" on:click|self={() => (showModal = false)} transition:fade>
-			<div class="modal-content" transition:slide|local>
-				<div class="modal-header">
-					<h2>{editando ? 'Editar Projeto' : 'Novo Projeto'}</h2>
-					<button class="close-btn" on:click={() => (showModal = false)}>&times;</button>
+		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
+			<div class="modal-dialog" transition:slide={{ duration: 250, y: 50 }}>
+				<div class="modal-dialog-header">
+					<h2 class="modal-title">
+						{editando ? $t('projetos.modal.editar.titulo') : $t('projetos.modal.adicionar.titulo')}
+					</h2>
+					<button
+						class="close-modal-button"
+						on:click={fecharModal}
+						aria-label={$t('projetos.modal.fecharAria')}>×</button
+					>
 				</div>
-				<form on:submit|preventDefault={salvarProjeto}>
-					<div class="form-grid">
-						<div class="input-container required">
-							<label for="nome"><FileText size={16} /> Nome</label>
+				<form class="modal-form" on:submit|preventDefault={salvarProjeto}>
+					<div class="form-fields-grid">
+						<div class="form-input-group required-field">
+							<label for="nome-projeto"
+								><FileText size={16} /> {$t('projetos.modal.form.nomeLabel')}</label
+							>
 							<input
 								type="text"
-								id="nome"
-								placeholder="Nome do projeto"
+								id="nome-projeto"
+								placeholder={$t('projetos.modal.form.nomePlaceholder')}
 								bind:value={nome}
 								required
-								class="input"
+								class="input-field"
 							/>
 						</div>
-						<div class="input-container">
-							<label for="descricao"><Folder size={16} /> Descrição</label>
+						<div class="form-input-group" style="grid-column: 1 / -1;">
+							<label for="descricao-projeto"
+								><FileText size={16} /> {$t('projetos.modal.form.descricaoLabel')}</label
+							>
 							<textarea
-								id="descricao"
-								placeholder="Descrição do projeto"
+								id="descricao-projeto"
+								placeholder={$t('projetos.modal.form.descricaoPlaceholder')}
 								bind:value={descricao}
-								class="input"
+								class="input-field"
+								rows="4"
 							></textarea>
 						</div>
-						<div class="input-container">
-							<label for="status"><Flag size={16} /> Status</label>
-							<select id="status" bind:value={status} class="input">
-								<option value="Ideia">Ideia</option>
-								<option value="Pendente">Pendente</option>
-								<option value="Em Processo">Em Processo</option>
-								<option value="Finalizado">Finalizado</option>
+						<div class="form-input-group">
+							<label for="status-projeto"
+								><Flag size={16} /> {$t('projetos.modal.form.statusLabel')}</label
+							>
+							<select id="status-projeto" bind:value={status} class="input-field">
+								{#each statusOptions as opt (opt.value)}
+									<option value={opt.value}>{opt.label}</option>
+								{/each}
 							</select>
 						</div>
-						<div class="input-container">
-							<label for="data-inicio"><Calendar size={16} /> Data de início</label>
-							<input id="data-inicio" type="date" bind:value={dataInicio} class="input" />
-						</div>
-						<div class="input-container">
-							<label for="data-prazo"><Target size={16} /> Prazo</label>
+						<div class="form-input-group">
+							<label for="data-inicio-projeto"
+								><Calendar size={16} /> {$t('projetos.modal.form.dataInicioLabel')}</label
+							>
 							<input
-								id="data-prazo"
+								id="data-inicio-projeto"
+								type="date"
+								bind:value={dataInicio}
+								class="input-field"
+							/>
+						</div>
+						<div class="form-input-group">
+							<label for="data-prazo-projeto"
+								><Target size={16} /> {$t('projetos.modal.form.dataPrazoLabel')}</label
+							>
+							<input
+								id="data-prazo-projeto"
 								type="date"
 								bind:value={dataPrazo}
-								class="input"
+								class="input-field"
 								min={dataInicio}
 							/>
 						</div>
 					</div>
-					<div class="modal-actions">
-						<button type="submit" class="btn-primary">
-							{editando ? 'Atualizar' : 'Adicionar'}
+					{#if erroValidacao}
+						<div class="form-validation-error">
+							<AlertCircle size={18} />
+							{erroValidacao}
+						</div>
+					{/if}
+					<div class="modal-dialog-actions">
+						<button type="submit" class="button primary-button">
+							{editando ? $t('projetos.modal.form.salvar') : $t('projetos.modal.form.criar')}
 						</button>
-						<button type="button" class="btn-secondary" on:click={() => (showModal = false)}>
-							Cancelar
-						</button>
+						<button type="button" class="button secondary-button" on:click={fecharModal}
+							>{$t('projetos.modal.form.cancelar')}</button
+						>
 					</div>
 				</form>
 			</div>
 		</div>
 	{/if}
 
-	<!-- Modal de Confirmação de Exclusão -->
 	{#if projetoParaExcluir}
-		<div class="modal-overlay" on:click|self={() => (projetoParaExcluir = null)} transition:fade>
-			<div class="modal-content" transition:slide|local>
-				<h2><AlertTriangle size={24} /> Confirmar Exclusão</h2>
-				<p>
-					Tem certeza que deseja excluir o projeto "<strong>{projetoParaExcluir.nome}</strong>"?
+		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
+			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250, y: 50 }}>
+				<div class="modal-dialog-header">
+					<AlertTriangle size={24} class="confirmation-icon" />
+					<h2 class="modal-title">{$t('projetos.modal.excluir.titulo')}</h2>
+				</div>
+				<p class="confirmation-message">
+					{@html $t('projetos.modal.excluir.mensagem', {
+						projectName: `<strong>${projetoParaExcluir.nome}</strong>`
+					})}
 				</p>
-				<p class="aviso-exclusao">Esta ação é irreversível e excluirá todos os dados do projeto!</p>
-
-				<div class="modal-actions">
-					<button class="btn-secondary" on:click={() => (projetoParaExcluir = null)}>
-						Cancelar
-					</button>
-					<button
-						class="btn-danger"
-						on:click={() => {
-							excluirProjeto(projetoParaExcluir.id);
-							projetoParaExcluir = null;
-						}}
+				<p class="irreversible-warning">{$t('projetos.modal.excluir.aviso')}</p>
+				<div class="modal-dialog-actions">
+					<button class="button secondary-button" on:click={fecharModal}
+						>{$t('projetos.modal.form.cancelar')}</button
 					>
-						<Trash2 size={16} /> Confirmar Exclusão
+					<button class="button danger-button" on:click={confirmarExclusao}>
+						<Trash2 size={16} />
+						{$t('projetos.modal.excluir.confirmar')}
 					</button>
 				</div>
 			</div>
@@ -305,360 +507,513 @@
 </div>
 
 <style>
-	.tarefas-container {
-		max-width: 1200px;
+	/* Cole aqui os seus estilos CSS originais para a página de projetos */
+	.page-container {
+		max-width: 1300px;
 		margin: 0 auto;
-		display: grid;
-		gap: 1.5rem;
+		padding: clamp(1.5rem, 3vw, 2rem);
+		display: flex;
+		flex-direction: column;
+		gap: 1.75rem;
 	}
-	.titulo-projeto {
-		margin: 0 0 0.5rem 0;
-		font-size: 1.1rem;
-		font-weight: 600;
-		color: var(--text);
-	}
-
-	header {
+	.page-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1rem;
-		padding-bottom: 1rem;
+		padding-bottom: 1.25rem;
 		border-bottom: 1px solid var(--border-color);
+		gap: 1rem;
+		flex-wrap: wrap;
 	}
-
-	h1 {
-		font-size: 28px;
-		color: var(--text);
+	.page-title {
+		font-size: clamp(1.75rem, 4vw, 2.25rem);
+		color: var(--app-text-color);
+		font-weight: 700;
 		margin: 0;
 	}
-
-	.header-controls {
+	.header-actions {
 		display: flex;
-		gap: 15px;
-		align-items: center;
-	}
-
-	.search-container {
-		position: relative;
-		display: flex;
-		align-items: center;
-	}
-
-	.search-container select {
-		padding: 10px 10px 10px 40px;
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		width: 250px;
-		font-size: 14px;
-	}
-
-	.search-container :global(svg) {
-		position: absolute;
-		left: 10px;
-		color: var(--medium-gray);
-	}
-
-	.estatisticas-container {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 1rem;
-	}
-
-	.estatistica-card {
-		background: white;
-		padding: 1.5rem;
-		border-radius: 4px;
-		text-align: center;
-		box-shadow: var(--shadow);
-		border: 1px solid var(--border-color);
-	}
-
-	.estatistica-card h3 {
-		margin: 0 0 1rem 0;
-		display: flex;
 		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		font-size: 1rem;
+		flex-wrap: wrap;
 	}
-
-	.estatistica-card span {
-		font-size: 2rem;
-		font-weight: bold;
-	}
-
-	.quadro-kanban {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-		gap: 1.5rem;
-	}
-
-	.coluna-status {
-		background: var(--background);
-		padding: 1rem;
-		border-radius: 4px;
-		min-height: 60vh;
-		box-shadow: var(--shadow);
-		border: 1px solid var(--border-color);
-	}
-
-	.coluna-titulo {
-		margin: 0 0 1rem 0;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid var(--border-color);
-		color: var(--text);
+	.filter-control {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-	}
-
-	.tarefa {
-		background: white;
-		padding: 1rem;
-		margin-bottom: 1rem;
-		border-radius: 4px;
-		box-shadow: var(--shadow);
-		cursor: grab;
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-		position: relative;
+		background-color: var(--card-background-color);
+		padding: 0.5rem 0.75rem;
+		border-radius: var(--radius);
 		border: 1px solid var(--border-color);
 	}
-
-	.tarefa:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	.filter-control :global(svg) {
+		color: var(--text-color-muted, var(--app-text-color)); /* Fallback */
 	}
-
-	.tarefa-header {
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.5rem;
-	}
-
-	.prioridade-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		display: inline-block;
-		margin-right: 0.5rem;
-	}
-
-	.data-info {
-		font-size: 0.85rem;
-		color: var(--medium-gray);
-		margin-top: 0.25rem;
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-	}
-
-	.tarefa-acoes {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 0.5rem;
-	}
-
-	.btn-icon {
-		background: none;
+	.input-field.minimal {
+		/* Estilo para o select do filtro */
+		background-color: transparent;
 		border: none;
 		padding: 0.25rem;
+		font-size: 0.9rem;
+		color: var(--app-text-color);
+		outline: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
 		cursor: pointer;
-		display: inline-flex;
+	}
+
+	.stats-overview-container {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1.25rem;
+	}
+	.stat-card {
+		background-color: var(--card-background-color);
+		padding: 1.25rem;
+		border-radius: var(--radius);
+		box-shadow: var(--shadow);
+		border: 1px solid var(--border-color);
+		display: flex;
 		align-items: center;
-		justify-content: center;
+		gap: 1rem;
+		transition:
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+	.stat-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 12px -3px color-mix(in srgb, var(--shadow) 40%, transparent);
+	}
+	.stat-icon {
+		flex-shrink: 0;
+		padding: 0.6rem;
+		border-radius: 8px; /* Adaptei para consistência com o card */
+	}
+	.stat-icon.total-icon {
+		/* Cor exemplo */
+		background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+		color: var(--primary-color);
+	}
+	.stat-icon.high-priority-icon {
+		/* Exemplo para "Finalizados", pode ser success-color */
+		background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
+		color: var(--success-color);
+	}
+	.stat-icon.overdue-icon {
+		background-color: color-mix(
+			in srgb,
+			var(--danger-color) 15%,
+			transparent
+		); /* Era warning, mudei para danger para Atrasados */
+		color: var(--danger-color);
+	}
+	.stat-content {
+		display: flex;
+		flex-direction: column;
+	}
+	.stat-value {
+		font-size: clamp(1.5rem, 3vw, 1.85rem);
+		font-weight: 700;
+		color: var(--app-text-color);
+		line-height: 1.1;
+	}
+	.stat-label {
+		font-size: 0.85rem;
+		color: var(--text-color-muted, var(--app-text-color));
+		font-weight: 500;
 	}
 
-	.btn-icon.danger:hover {
-		color: var(--danger);
+	.kanban-board-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Colunas do Kanban */
+		gap: 1.5rem;
+		align-items: flex-start;
 	}
-
-	.modal-overlay {
+	.status-column {
+		background-color: var(
+			--content-background-color
+		); /* Ou card-background-color se preferir colunas mais destacadas */
+		padding: 1rem;
+		border-radius: var(--radius);
+		border: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		min-height: 50vh; /* Ajustado */
+	}
+	.column-header {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: var(--app-text-color);
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-color);
+		margin-bottom: 0.5rem; /* Era margin:0 0 1rem 0 */
+	}
+	.column-header :global(svg) {
+		color: var(--text-color-muted, var(--app-text-color));
+	}
+	.column-title-text {
+		flex-grow: 1;
+	}
+	.column-task-count {
+		font-size: 0.85rem;
+		color: var(--text-color-muted, var(--app-text-color));
+		background-color: var(--border-color);
+		padding: 0.1rem 0.4rem;
+		border-radius: 4px;
+		font-weight: 500;
+	}
+	.tasks-list {
+		/* Lista de projetos dentro da coluna */
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		min-height: 100px; /* Para garantir que a área de drop é visível */
+		flex-grow: 1;
+	}
+	.tarefa-card {
+		/* Card de Projeto */
+		background-color: var(--card-background-color);
+		padding: 1rem;
+		border-radius: var(--radius); /* Era 8px */
+		box-shadow: var(--shadow);
+		/* cursor: grab; Não tem drag-and-drop aqui por enquanto */
+		transition:
+			transform 0.15s ease,
+			box-shadow 0.15s ease;
+		border: 1px solid var(--border-color);
+		/* border-left: 4px solid transparent; Se quiser indicador de cor */
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.tarefa-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 5px 10px -2px color-mix(in srgb, var(--shadow) 30%, transparent);
+	}
+	.tarefa-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start; /* Era center */
+		gap: 0.5rem;
+	}
+	.tarefa-identifier {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-grow: 1;
+		min-width: 0; /* Para truncamento de texto */
+	}
+	.tarefa-description {
+		/* Nome do projeto */
+		font-weight: 600;
+		color: var(--app-text-color);
+		line-height: 1.3;
+		word-break: break-word;
+	}
+	.project-description {
+		/* Descrição do projeto, dentro do card */
+		font-size: 0.9rem;
+		color: var(--text-color-muted, var(--app-text-color));
+		line-height: 1.5;
+		margin-bottom: 0.3rem; /* Adicionado */
+	}
+	.tarefa-action-buttons {
+		display: flex;
+		gap: 0.25rem;
+		opacity: 0; /* Aparece no hover */
+		transition: opacity 0.2s ease;
+		flex-shrink: 0;
+	}
+	.tarefa-card:hover .tarefa-action-buttons {
+		opacity: 1;
+	}
+	.icon-button {
+		background: none;
+		border: none;
+		padding: 0.3rem;
+		cursor: pointer;
+		color: var(--text-color-muted, var(--app-text-color));
+		display: inline-flex;
+		border-radius: 4px;
+	}
+	.icon-button:hover {
+		color: var(--primary-color);
+		background-color: var(--border-color);
+	}
+	.icon-button.danger:hover {
+		color: var(--danger-color);
+		background-color: color-mix(in srgb, var(--danger-color) 15%, transparent);
+	}
+	.tarefa-details-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+		gap: 0.4rem 0.8rem;
+		font-size: 0.8rem;
+		color: var(--text-color-muted, var(--app-text-color));
+		margin-top: 0.4rem; /* Adicionado espaçamento */
+	}
+	.detail-item {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.detail-item :global(svg) {
+		flex-shrink: 0;
+	}
+	.final-date-item .overdue-text {
+		color: var(--danger-color);
+		font-weight: 600;
+	}
+	.empty-column-message {
+		text-align: center;
+		padding: 2rem 1rem;
+		color: var(--text-color-muted, var(--app-text-color));
+		font-style: italic;
+		font-size: 0.9rem;
+		border: 2px dashed var(--border-color);
+		border-radius: var(--radius);
+		margin-top: 1rem;
+	}
+	.form-validation-error {
+		color: var(--danger-text-color);
+		background-color: var(--danger-background-color);
+		padding: 0.8rem 1rem;
+		border-radius: var(--radius);
+		margin-top: 0.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+		border-left: 3px solid var(--danger-color);
+	}
+	.modal-backdrop {
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.7);
+		background-color: color-mix(in srgb, var(--app-background-color) 10%, black 60%);
 		display: grid;
 		place-items: center;
 		z-index: 1000;
+		padding: 1rem;
 	}
-
-	.modal-content {
-		background: white;
-		padding: 25px;
-		border-radius: 8px;
-		width: 90%;
+	.modal-dialog {
+		background-color: var(--card-background-color);
+		padding: clamp(1.25rem, 4vw, 2rem);
+		border-radius: var(--radius);
+		width: 100%;
 		max-width: 600px;
 		max-height: 90vh;
 		overflow-y: auto;
+		box-shadow: 0 10px 30px -5px color-mix(in srgb, var(--shadow) 70%, transparent);
+		border: 1px solid var(--border-color);
 	}
-
-	.modal-header {
+	.modal-dialog-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 20px;
+		margin-bottom: 1.5rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-color);
 	}
-
-	.close-btn {
+	.modal-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--app-text-color);
+		margin: 0;
+	}
+	.close-modal-button {
 		background: none;
 		border: none;
-		font-size: 24px;
+		font-size: 1.75rem;
 		cursor: pointer;
-		color: var(--medium-gray);
-		padding: 0 8px;
+		color: var(--text-color-muted, var(--app-text-color));
+		padding: 0 0.5rem;
+		line-height: 1;
 	}
-
-	.close-btn:hover {
-		color: var(--text);
+	.close-modal-button:hover {
+		color: var(--app-text-color);
 	}
-
-	.form-grid {
+	.modal-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+	.form-fields-grid {
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: 1rem;
 	}
-
-	.input-container {
+	@media (min-width: 600px) {
+		.form-fields-grid {
+			grid-template-columns: 1fr 1fr;
+			gap: 1rem 1.25rem;
+		}
+		.form-fields-grid .form-input-group:nth-child(1),
+		.form-fields-grid .form-input-group:nth-child(2) {
+			grid-column: 1 / -1;
+		}
+	}
+	.form-input-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.4rem;
 	}
-
-	.input-container label {
+	.form-input-group label {
 		font-weight: 500;
-		color: var(--text);
+		color: var(--app-text-color);
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.4rem;
+		font-size: 0.9rem;
 	}
-
-	.input-container.required label::after {
+	.form-input-group.required-field label::after {
 		content: '*';
-		color: var(--danger);
-		margin-left: 0.25rem;
+		color: var(--danger-color);
+		margin-left: 0.2rem;
 	}
-
-	.input {
-		padding: 0.75rem;
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		font-size: 1rem;
-		transition: border-color 0.3s ease;
+	.input-field {
+		padding: 0.7rem 0.9rem;
+		border: 1px solid var(--input-border-color);
+		border-radius: var(--radius);
+		font-size: 0.95rem;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease;
 		font-family: inherit;
+		background-color: var(--input-background-color);
+		color: var(--app-text-color);
+		width: 100%;
 	}
-
-	.input:focus {
-		border-color: var(--primary);
+	.input-field:focus {
+		border-color: var(--primary-color);
 		outline: none;
+		box-shadow: 0 0 0 3px var(--input-focus-ring-color);
 	}
-
-	textarea.input {
+	textarea.input-field {
 		resize: vertical;
-		min-height: 120px;
+		min-height: 100px;
 	}
-
-	.modal-actions {
+	.modal-dialog-actions {
 		display: flex;
-		gap: 10px;
+		gap: 0.75rem;
 		justify-content: flex-end;
-		margin-top: 20px;
+		margin-top: 1.5rem;
 	}
-
-	.btn-primary {
-		background: var(--primary);
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 4px;
+	.button {
+		padding: 0.65rem 1.25rem;
+		border-radius: var(--radius);
 		cursor: pointer;
-		transition: background 0.3s;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.5rem;
+		font-weight: 500;
+		font-size: 0.9rem;
+		text-decoration: none;
+		border: 1px solid transparent;
+		transition:
+			background-color 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease,
+			opacity 0.2s ease;
+		white-space: nowrap;
 	}
-
-	.btn-primary:hover {
-		background: #000;
+	.button:focus-visible {
+		outline: 2px solid var(--primary-color);
+		outline-offset: 2px;
 	}
-
-	.btn-secondary {
-		background: var(--light-gray);
-		color: var(--text);
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 4px;
-		cursor: pointer;
+	.button.primary-button {
+		background-color: var(--primary-color);
+		color: var(--primary-color-text);
+		border-color: var(--primary-color);
 	}
-
-	.btn-secondary:hover {
-		background: #d0d0d0;
+	.button.primary-button:hover {
+		background-color: var(--primary-color-hover);
+		border-color: var(--primary-color-hover);
 	}
-
-	/* Estilos para o modal de confirmação de exclusão */
-	.aviso-exclusao {
-		color: var(--danger);
-		background-color: #fff0f0;
+	.button.secondary-button {
+		background-color: var(--card-background-color);
+		color: var(--app-text-color);
+		border-color: var(--border-color);
+	}
+	.button.secondary-button:hover {
+		background-color: var(--border-color);
+		border-color: var(--text-color-muted, var(--app-text-color));
+	}
+	.button.danger-button {
+		background-color: var(--danger-color);
+		color: var(--primary-color-text);
+		border-color: var(--danger-color);
+	}
+	.button.danger-button:hover {
+		background-color: var(--danger-color-hover);
+		border-color: var(--danger-color-hover);
+	}
+	.confirmation-modal .modal-dialog-header {
+		border-bottom: none;
+		margin-bottom: 0.5rem;
+		justify-content: center;
+	}
+	.confirmation-modal .confirmation-icon {
+		color: var(--danger-color);
+		margin-right: 0.5rem;
+	}
+	.confirmation-message {
+		text-align: center;
+		font-size: 1.05rem;
+		color: var(--app-text-color);
+		margin-bottom: 0.5rem;
+	}
+	.irreversible-warning {
+		text-align: center;
+		font-size: 0.9rem;
+		color: var(--danger-text-color);
+		background-color: var(--danger-background-color);
 		padding: 0.75rem;
-		border-radius: 4px;
+		border-radius: var(--radius);
 		margin: 1rem 0;
-		border-left: 3px solid var(--danger);
+		border-left: 3px solid var(--danger-color);
 	}
-
-	.btn-danger {
-		background: var(--danger);
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 4px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		transition: background 0.3s;
-	}
-
-	.btn-danger:hover {
-		background: #b30000;
-	}
-
 	@media (max-width: 768px) {
-		header {
+		.page-header {
 			flex-direction: column;
 			align-items: flex-start;
-			gap: 15px;
+			gap: 1rem;
 		}
-
-		.header-controls {
+		.header-actions {
 			flex-direction: column;
 			width: 100%;
 			align-items: stretch;
 		}
-
-		.search-container {
+		.filter-control {
 			width: 100%;
+			justify-content: space-between;
 		}
-
-		.search-container select {
-			width: 100%;
+		.filter-control select.minimal {
+			flex-grow: 1;
 		}
-
-		.estatisticas-container {
+		.stats-overview-container {
 			grid-template-columns: 1fr;
 		}
-
-		.quadro-kanban {
+		.kanban-board-grid {
 			grid-template-columns: 1fr;
 		}
-
-		.modal-content {
-			padding: 15px;
+		.modal-dialog {
+			padding: 1.25rem;
 			width: 95%;
+		}
+		.modal-dialog-actions {
+			flex-direction: column-reverse;
+		}
+		.modal-dialog-actions .button {
+			width: 100%;
 		}
 	}
 </style>

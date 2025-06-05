@@ -1,83 +1,158 @@
+/* src/app.css */
+
+/* === SEU RESET E ESTILOS BASE === */
 *,
 *::before,
 *::after {
 	box-sizing: border-box;
 }
 
-:root {
-	--primary: #333;
-	--secondary: #555;
-	--background: #f5f5f5;
-	--text: #222;
-	--success: rgb(13, 121, 31) f40;
-	--warning: #666;
-	--danger: #963333;
-	--light-gray: #e0e0e0;
-	--medium-gray: #999;
-	--shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	--border-color: #ddd;
-}
-
-h1,
-h2,
-h3,
-h5,
-h6 {
-	margin: 0;
-}
+/* Removi h1-h6 margin:0 porque é muito agressivo, pode ser adicionado seletivamente */
 
 body {
-	font-family: Arial, sans-serif;
-	background-color: #f4f4f4;
+	font-family: Arial, sans-serif; /* Mantendo sua escolha de fonte */
 	margin: 0;
 	padding: 0;
+	/* Estas serão controladas pelas variáveis de tema abaixo */
+	background-color: var(--app-background-color);
+	color: var(--app-text-color);
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
+	line-height: 1.6;
 }
 
 .icon {
+	/* Mantido do seu CSS */
 	vertical-align: middle;
 }
 
+/* === VARIÁVEIS DE TEMA GLOBAIS (da minha sugestão anterior, ajustadas) === */
+:root {
+	/* Tema Claro (Default) */
+	--primary-color: #6c5ce7; /* Seu primário */
+	--primary-color-hover: #5849d3; /* Um pouco mais escuro para hover */
+	--primary-color-text: #ffffff;
+
+	--secondary-color: #636363; /* Seu secundário */
+	--secondary-color-hover: #4f4f4f;
+	--secondary-color-text: #ffffff;
+
+	--app-background-color: #f4f4f4; /* Seu background de body */
+	--sidebar-background-color: #ffffff; /* Seu background de aside/sidebar */
+	--content-background-color: #f4f4f4; /* Fundo da área de conteúdo principal */
+	--card-background-color: #ffffff; /* Para seções dentro do conteúdo, como a página de config */
+
+	--app-text-color: #333333; /* Texto geral do app */
+	--sidebar-text-color: #000000; /* Seu texto do sidebar */
+	--link-hover-background-color: hsla(0, 0%, 0%, 0.1); /* Seu link hover */
+	--link-active-background-color: #a3a3a3; /* Sua cor ativa */
+	--link-active-text-color: #ffffff; /* Texto para link ativo */
+
+	--border-color: #b9b9b9; /* rgb(185, 185, 185) */
+	--input-background-color: #ffffff;
+	--input-border-color: #cccccc;
+	--input-focus-ring-color: rgba(108, 92, 231, 0.3); /* Baseado no seu primário */
+
+	--success-color: #10b981;
+	--success-background-color: #d1fae5;
+	--success-text-color: #065f46;
+
+	--warning-color: #f59e0b;
+	--warning-background-color: #fef3c7;
+	--warning-text-color: #92400e;
+
+	--danger-color: #ef4444;
+	--danger-background-color: #fee2e2;
+	--danger-text-color: #991b1b;
+
+	--shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+	--radius: 0.375rem; /* 6px */
+}
+
+[data-tema='escuro'] {
+	--primary-color: #8a7ff0; /* Versão mais clara do seu primário para tema escuro */
+	--primary-color-hover: #6c5ce7;
+	/* --primary-color-text: #111827; (se precisar) */
+
+	--secondary-color: #a0a0a0;
+	--secondary-color-hover: #888888;
+
+	--app-background-color: #1e1e1e;
+	--sidebar-background-color: #2c2c2c;
+	--content-background-color: #1e1e1e;
+	--card-background-color: #363636;
+
+	--app-text-color: #e0e0e0;
+	--sidebar-text-color: #f0f0f0;
+	--link-hover-background-color: hsla(0, 0%, 100%, 0.1);
+	--link-active-background-color: #505050;
+	--link-active-text-color: #f0f0f0;
+
+	--border-color: #444444;
+	--input-background-color: #3a3a3a;
+	--input-border-color: #555555;
+	--input-focus-ring-color: rgba(138, 127, 240, 0.4);
+
+	--success-color: #34d399;
+	--success-background-color: #064e3b;
+	--success-text-color: #a7f3d0;
+
+	--warning-color: #fbbf24;
+	--warning-background-color: #78350f;
+	--warning-text-color: #fde68a;
+
+	--danger-color: #f87171;
+	--danger-background-color: #7f1d1d;
+	--danger-text-color: #fecaca;
+
+	--shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilos para o seu .app (se ainda for usar, o layout atual não usa) */
 .app {
 	display: grid;
-	grid-template-columns: 225px 1fr;
+	grid-template-columns: 225px 1fr; /* Ajustar se a sidebar for responsiva */
 	grid-template-rows: auto;
 	height: 100%;
 	width: 100%;
 }
 
+/* Estilos para o seu aside (se ainda for usar) */
 aside h1 {
+	/* Seu H1 do aside */
 	font-size: 24px;
 	margin-bottom: 20px;
-	color: #000000;
+	color: var(--sidebar-text-color); /* Usar variável de tema */
 	margin-top: 23px;
 }
 
 aside {
+	/* Seu aside */
 	padding: 1rem;
-	background-color: #ffffff;
-	border-right: 1px solid rgb(185, 185, 185);
-}
-
-aside * {
-	color: black;
+	background-color: var(--sidebar-background-color); /* Usar variável de tema */
+	border-right: 1px solid var(--border-color); /* Usar variável de tema */
 }
 
 aside a {
+	/* Seus links do aside */
 	display: flex;
 	align-items: center;
 	gap: 0.5em;
 	padding: 0.5rem 0.75rem;
 	text-decoration: none;
 	font-weight: bold;
-	border-radius: 4px;
+	border-radius: var(--radius); /* Usar variável de tema */
 	transition: all 120ms ease-in-out;
+	color: var(--sidebar-text-color); /* Cor do texto do link */
 }
 
 aside a:hover {
-	background: hsla(0, 0%, 0%, 0.15);
+	background: var(--link-hover-background-color); /* Usar variável de tema */
 }
 
 .hive {
+	/* Seu .hive */
 	width: 40px;
 	vertical-align: middle;
 	margin-left: 10px;

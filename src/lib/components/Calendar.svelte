@@ -1,65 +1,199 @@
 <!-- src/lib/components/Calendar.svelte -->
-<script>
-	import { onMount } from 'svelte';
-	import { Calendar } from 'lucide-svelte';
-	import { reminders } from '$lib/stores/reminders';
+<script lang="ts">
+	import { onDestroy } from 'svelte'; // Removido onMount se não for usado
+	import { derived } from 'svelte/store';
+	import { Calendar as CalendarIcon, Trash2 as TrashIcon, X as XIcon } from 'lucide-svelte';
+	import { reminders } from '../../lib/stores/reminders';
+	import { configuracoes, type Idioma as AppIdioma } from '../../lib/stores/pageStore';
+
+	// --- DICIONÁRIO DE TRADUÇÕES PARA O CALENDÁRIO ---
+	const calendarTranslations = {
+		pt: {
+			'calendar.titulo': 'Meu Calendário',
+			'calendar.meses.janeiro': 'Janeiro',
+			'calendar.meses.fevereiro': 'Fevereiro',
+			'calendar.meses.marco': 'Março',
+			'calendar.meses.abril': 'Abril',
+			'calendar.meses.maio': 'Maio',
+			'calendar.meses.junho': 'Junho',
+			'calendar.meses.julho': 'Julho',
+			'calendar.meses.agosto': 'Agosto',
+			'calendar.meses.setembro': 'Setembro',
+			'calendar.meses.outubro': 'Outubro',
+			'calendar.meses.novembro': 'Novembro',
+			'calendar.meses.dezembro': 'Dezembro',
+			'calendar.dias.dom': 'Dom',
+			'calendar.dias.seg': 'Seg',
+			'calendar.dias.ter': 'Ter',
+			'calendar.dias.qua': 'Qua',
+			'calendar.dias.qui': 'Qui',
+			'calendar.dias.sex': 'Sex',
+			'calendar.dias.sab': 'Sáb',
+			'calendar.lembretesDe': 'Lembretes de {mes}',
+			'calendar.nenhumLembrete': 'Nenhum lembrete para este mês.',
+			'calendar.modal.novoLembrete': 'Novo Lembrete',
+			'calendar.modal.dataSelecionada': 'Data Selecionada',
+			'calendar.modal.horario': 'Horário',
+			'calendar.modal.descricao': 'Descrição do Lembrete',
+			'calendar.modal.placeholderDescricao': 'Ex: Reunião com equipe',
+			'calendar.modal.salvar': 'Salvar Lembrete',
+			'calendar.modal.cancelar': 'Cancelar',
+			'calendar.modal.fechar': 'Fechar modal',
+			'calendar.modal.excluirLembreteAria': 'Excluir lembrete',
+			'calendar.selecionarDataAria': 'Selecionar data {data}',
+			'calendar.mesAnterior': 'Mês Anterior', // Chave adicionada para aria-label
+			'calendar.proximoMes': 'Próximo Mês' // Chave adicionada para aria-label
+		},
+		en: {
+			'calendar.titulo': 'My Calendar',
+			'calendar.meses.janeiro': 'January',
+			'calendar.meses.fevereiro': 'February',
+			'calendar.meses.marco': 'March',
+			'calendar.meses.abril': 'April',
+			'calendar.meses.maio': 'May',
+			'calendar.meses.junho': 'June',
+			'calendar.meses.julho': 'July',
+			'calendar.meses.agosto': 'August',
+			'calendar.meses.setembro': 'September',
+			'calendar.meses.outubro': 'October',
+			'calendar.meses.novembro': 'November',
+			'calendar.meses.dezembro': 'December',
+			'calendar.dias.dom': 'Sun',
+			'calendar.dias.seg': 'Mon',
+			'calendar.dias.ter': 'Tue',
+			'calendar.dias.qua': 'Wed',
+			'calendar.dias.qui': 'Thu',
+			'calendar.dias.sex': 'Fri',
+			'calendar.dias.sab': 'Sat',
+			'calendar.lembretesDe': 'Reminders for {mes}',
+			'calendar.nenhumLembrete': 'No reminders for this month.',
+			'calendar.modal.novoLembrete': 'New Reminder',
+			'calendar.modal.dataSelecionada': 'Selected Date',
+			'calendar.modal.horario': 'Time',
+			'calendar.modal.descricao': 'Reminder Description',
+			'calendar.modal.placeholderDescricao': 'E.g., Team meeting',
+			'calendar.modal.salvar': 'Save Reminder',
+			'calendar.modal.cancelar': 'Cancel',
+			'calendar.modal.fechar': 'Close modal',
+			'calendar.modal.excluirLembreteAria': 'Delete reminder',
+			'calendar.selecionarDataAria': 'Select date {data}',
+			'calendar.mesAnterior': 'Previous Month', // Chave adicionada para aria-label
+			'calendar.proximoMes': 'Next Month' // Chave adicionada para aria-label
+		}
+		// Adicionar 'es' e 'fr' aqui, garantindo que as chaves 'calendar.mesAnterior' e 'calendar.proximoMes' também sejam adicionadas.
+	};
+
+	const t = derived(configuracoes, ($cfg) => {
+		return (key: string, replacements?: Record<string, string | number | undefined>): string => {
+			const selectedLang = $cfg.idioma;
+			let langDict = calendarTranslations[selectedLang as keyof typeof calendarTranslations];
+
+			if (!langDict) {
+				// Se o idioma selecionado não tem um dicionário (ex: 'es' ainda não adicionado)
+				langDict = calendarTranslations.pt; // Fallback para Português
+			}
+
+			let text = langDict?.[key] || calendarTranslations.pt?.[key] || key;
+
+			if (replacements) {
+				for (const k in replacements) {
+					const replacementValue = replacements[k];
+					if (replacementValue !== undefined) {
+						text = text.replace(new RegExp(`{${k}}`, 'g'), String(replacementValue));
+					}
+				}
+			}
+			return text;
+		};
+	});
 
 	let currentDate = new Date();
-	let selectedDate = null;
+	let selectedDate: Date | null = null;
 	let showReminderModal = false;
 	let reminderText = '';
 	let reminderTime = '09:00';
 
-	// Funções de navegação
+	$: monthNamesTranslated = [
+		$t('calendar.meses.janeiro'),
+		$t('calendar.meses.fevereiro'),
+		$t('calendar.meses.marco'),
+		$t('calendar.meses.abril'),
+		$t('calendar.meses.maio'),
+		$t('calendar.meses.junho'),
+		$t('calendar.meses.julho'),
+		$t('calendar.meses.agosto'),
+		$t('calendar.meses.setembro'),
+		$t('calendar.meses.outubro'),
+		$t('calendar.meses.novembro'),
+		$t('calendar.meses.dezembro')
+	];
+	$: dayNamesTranslated = [
+		$t('calendar.dias.dom'),
+		$t('calendar.dias.seg'),
+		$t('calendar.dias.ter'),
+		$t('calendar.dias.qua'),
+		$t('calendar.dias.qui'),
+		$t('calendar.dias.sex'),
+		$t('calendar.dias.sab')
+	];
+
 	function previousMonth() {
 		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 	}
-
 	function nextMonth() {
 		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 	}
 
-	function getCalendarDays() {
+	interface CalendarDay {
+		date: Date;
+		isCurrentMonth: boolean;
+		isToday: boolean;
+		hasReminder: boolean;
+	}
+
+	function getCalendarDays(): CalendarDay[] {
 		const year = currentDate.getFullYear();
 		const month = currentDate.getMonth();
-
-		const firstDay = new Date(year, month, 1);
-		const lastDay = new Date(year, month + 1, 0);
-		const startDate = new Date(firstDay);
-		startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-		const days = [];
-		const currentDateObj = new Date(startDate);
-
+		const firstDayOfMonth = new Date(year, month, 1);
+		const startDate = new Date(firstDayOfMonth);
+		startDate.setDate(startDate.getDate() - firstDayOfMonth.getDay());
+		const days: CalendarDay[] = [];
+		const dateIterator = new Date(startDate);
 		for (let i = 0; i < 42; i++) {
 			days.push({
-				date: new Date(currentDateObj),
-				isCurrentMonth: currentDateObj.getMonth() === month,
-				isToday: isToday(currentDateObj),
-				hasReminder: hasReminderOnDate(currentDateObj)
+				date: new Date(dateIterator),
+				isCurrentMonth: dateIterator.getMonth() === month,
+				isToday: isToday(dateIterator),
+				hasReminder: hasReminderOnDate(dateIterator)
 			});
-			currentDateObj.setDate(currentDateObj.getDate() + 1);
+			dateIterator.setDate(dateIterator.getDate() + 1);
 		}
-
 		return days;
 	}
 
-	function isToday(date) {
+	function isToday(date: Date): boolean {
 		const today = new Date();
-		return date.toDateString() === today.toDateString();
+		return (
+			date.getFullYear() === today.getFullYear() &&
+			date.getMonth() === today.getMonth() &&
+			date.getDate() === today.getDate()
+		);
 	}
 
-	function hasReminderOnDate(date) {
+	function formatDateKey(date: Date): string {
+		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+	}
+
+	function hasReminderOnDate(date: Date): boolean {
 		const dateKey = formatDateKey(date);
 		return $reminders[dateKey] && $reminders[dateKey].length > 0;
 	}
 
-	function formatDateKey(date) {
-		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-	}
-
-	function formatDisplayDate(date) {
-		return date.toLocaleDateString('pt-BR', {
+	function formatDisplayDate(date: Date | null): string {
+		if (!date) return '';
+		const currentLang: AppIdioma = $configuracoes.idioma || 'pt'; // Fallback para 'pt' que é um AppIdioma válido
+		const localeForDate = currentLang.split('-')[0];
+		return date.toLocaleDateString(localeForDate, {
 			weekday: 'long',
 			year: 'numeric',
 			month: 'long',
@@ -67,7 +201,7 @@
 		});
 	}
 
-	function selectDate(date) {
+	function selectDateForReminder(date: Date) {
 		selectedDate = date;
 		showReminderModal = true;
 		reminderText = '';
@@ -76,480 +210,572 @@
 
 	function addReminder() {
 		if (!reminderText.trim() || !selectedDate) return;
-
 		const dateKey = formatDateKey(selectedDate);
-
-		// Atualiza a store
-		reminders.update((r) => {
-			const updated = { ...r };
-			if (!updated[dateKey]) {
-				updated[dateKey] = [];
-			}
-			updated[dateKey].push({
-				id: Date.now(),
+		reminders.update((currentReminders) => {
+			const updatedReminders = { ...currentReminders };
+			if (!updatedReminders[dateKey]) updatedReminders[dateKey] = [];
+			updatedReminders[dateKey].push({
+				id: Date.now().toString(),
 				text: reminderText.trim(),
-				time: reminderTime
+				time: reminderTime,
+				completed: false
 			});
-			return updated;
+			return updatedReminders;
 		});
-
-		closeModal();
+		closeReminderModal();
 	}
 
-	function removeReminder(date, reminderId) {
+	function removeReminder(date: Date, reminderId: string) {
 		const dateKey = formatDateKey(date);
-
-		// Atualiza a store
-		reminders.update((r) => {
-			if (!r[dateKey]) return r;
-			const updated = { ...r };
-			updated[dateKey] = updated[dateKey].filter((r) => r.id !== reminderId);
-			if (updated[dateKey].length === 0) {
-				delete updated[dateKey];
-			}
-			return updated;
+		reminders.update((currentReminders) => {
+			if (!currentReminders[dateKey]) return currentReminders;
+			const updatedReminders = { ...currentReminders };
+			updatedReminders[dateKey] = updatedReminders[dateKey].filter((r) => r.id !== reminderId);
+			if (updatedReminders[dateKey].length === 0) delete updatedReminders[dateKey];
+			return updatedReminders;
 		});
 	}
 
-	function closeModal() {
+	function closeReminderModal() {
 		showReminderModal = false;
 		selectedDate = null;
+		reminderText = '';
+		reminderTime = '09:00';
 	}
 
-	function getRemindersByDate(date) {
+	interface MonthlyReminderGroup {
+		date: Date;
+		reminders: ReminderItem[];
+	}
+
+	function getRemindersForDate(date: Date): ReminderItem[] {
 		const dateKey = formatDateKey(date);
 		return $reminders[dateKey] || [];
 	}
 
-	function getMonthlyReminders() {
+	function getMonthlyReminders(): MonthlyReminderGroup[] {
 		const month = currentDate.getMonth();
 		const year = currentDate.getFullYear();
-		const monthlyReminders = [];
-
-		// Itera sobre os lembretes na store
+		const monthly: MonthlyReminderGroup[] = [];
 		for (const [dateKey, remindersList] of Object.entries($reminders)) {
-			const [y, m] = dateKey.split('-').map(Number);
+			const [y, m, d] = dateKey.split('-').map(Number);
 			if (y === year && m - 1 === month) {
-				const date = new Date(y, m - 1, dateKey.split('-')[2]);
-				monthlyReminders.push({
-					date,
-					reminders: remindersList
-				});
+				monthly.push({ date: new Date(y, m - 1, d), reminders: remindersList as ReminderItem[] });
 			}
 		}
-		return monthlyReminders;
+		return monthly.sort((a, b) => a.date.getDate() - b.date.getDate());
 	}
-
-	const monthNames = [
-		'Janeiro',
-		'Fevereiro',
-		'Março',
-		'Abril',
-		'Maio',
-		'Junho',
-		'Julho',
-		'Agosto',
-		'Setembro',
-		'Outubro',
-		'Novembro',
-		'Dezembro'
-	];
-
-	const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 </script>
 
-<div class="calendar-container">
-	<!-- Header idêntico ao da página de tarefas -->
-	<header class="page-header">
-		<h1>
-			<Calendar size={24} />
-			Meu Calendário
-		</h1>
+<div class="calendar-component-container">
+	<header class="page-header-style">
+		<h1><CalendarIcon size={28} /> {$t('calendar.titulo')}</h1>
 	</header>
 
-	<!-- Controles do calendário -->
-	<div class="calendar-header">
-		<button on:click={previousMonth} class="btn-secondary">‹</button>
-		<h2>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
-		<button on:click={nextMonth} class="btn-secondary">›</button>
+	<div class="calendar-controls">
+		<button
+			on:click={previousMonth}
+			class="button secondary-button month-nav-button"
+			aria-label={$t('calendar.mesAnterior')}>‹</button
+		>
+		<h2 class="current-month-year">
+			{monthNamesTranslated[currentDate.getMonth()]}
+			{currentDate.getFullYear()}
+		</h2>
+		<button
+			on:click={nextMonth}
+			class="button secondary-button month-nav-button"
+			aria-label={$t('calendar.proximoMes')}>›</button
+		>
 	</div>
 
-	<!-- Grade do calendário -->
-	<div class="calendar-grid">
-		{#each dayNames as dayName}
-			<div class="day-header">{dayName}</div>
+	<div class="calendar-grid-layout">
+		{#each dayNamesTranslated as dayName (dayName)}
+			<div class="day-name-header">{dayName}</div>
 		{/each}
 
-		{#each getCalendarDays() as day}
+		{#each getCalendarDays() as day (day.date.toISOString())}
 			<div
-				class="day-cell"
-				class:current-month={day.isCurrentMonth}
-				class:other-month={!day.isCurrentMonth}
-				class:today={day.isToday}
-				class:has-reminder={day.hasReminder}
-				on:click={() => day.isCurrentMonth && selectDate(day.date)}
+				class="day-cell-style"
+				class:is-current-month={day.isCurrentMonth}
+				class:is-other-month={!day.isCurrentMonth}
+				class:is-today={day.isToday}
+				class:has-reminder-style={day.hasReminder && day.isCurrentMonth}
+				on:click={() => day.isCurrentMonth && selectDateForReminder(day.date)}
+				on:keydown={(e) =>
+					day.isCurrentMonth && e.key === 'Enter' && selectDateForReminder(day.date)}
+				tabindex={day.isCurrentMonth ? 0 : -1}
+				role="button"
+				aria-label={$t('calendar.selecionarDataAria', { data: day.date.getDate() })}
 			>
-				<span class="day-number">{day.date.getDate()}</span>
-				{#if day.hasReminder}
-					<div class="reminder-indicator"></div>
+				<span class="day-number-display">{day.date.getDate()}</span>
+				{#if day.hasReminder && day.isCurrentMonth}
+					<div class="reminder-dot-indicator"></div>
 				{/if}
 			</div>
 		{/each}
 	</div>
 
-	<!-- Lembretes do mês -->
-	<div class="monthly-reminders">
-		<h3>Lembretes de {monthNames[currentDate.getMonth()]}</h3>
+	<div class="reminders-section">
+		<h3 class="section-title">
+			{$t('calendar.lembretesDe', { mes: monthNamesTranslated[currentDate.getMonth()] })}
+		</h3>
 		{#if getMonthlyReminders().length > 0}
-			{#each getMonthlyReminders() as dayReminders (dayReminders.date)}
-				<div class="reminder-group">
-					<h4>{formatDisplayDate(dayReminders.date)}</h4>
-					{#each dayReminders.reminders as reminder (reminder.id)}
-						<div class="reminder-item">
-							<span class="time">{reminder.time}</span>
-							<span class="text">{reminder.text}</span>
-							<button
-								on:click|stopPropagation={() => removeReminder(dayReminders.date, reminder.id)}
-								class="btn-icon danger"
-							>
-								×
-							</button>
-						</div>
-					{/each}
-				</div>
-			{/each}
+			<ul class="reminders-list">
+				{#each getMonthlyReminders() as dayReminders (dayReminders.date.toISOString())}
+					<li class="reminder-day-group">
+						<h4 class="reminder-date-header">{formatDisplayDate(dayReminders.date)}</h4>
+						<ul class="reminders-for-day">
+							{#each dayReminders.reminders as reminder (reminder.id)}
+								<li class="reminder-item-style">
+									<span class="reminder-time">{reminder.time}</span>
+									<span class="reminder-text">{reminder.text}</span>
+									<button
+										on:click|stopPropagation={() => removeReminder(dayReminders.date, reminder.id)}
+										class="icon-button danger"
+										aria-label={$t('calendar.modal.excluirLembreteAria')}
+									>
+										<TrashIcon size={16} />
+									</button>
+								</li>
+							{/each}
+						</ul>
+					</li>
+				{/each}
+			</ul>
 		{:else}
-			<p class="empty">Nenhum lembrete para este mês</p>
+			<p class="empty-message">{$t('calendar.nenhumLembrete')}</p>
 		{/if}
 	</div>
 
-	<!-- Modal de lembrete -->
 	{#if showReminderModal}
-		<div class="modal-overlay" on:click={closeModal}>
-			<div class="modal-content" on:click|stopPropagation>
-				<div class="modal-header">
-					<h3>Novo Lembrete</h3>
-					<button class="close-btn" on:click={closeModal}>×</button>
+		<div class="modal-backdrop" on:click={closeReminderModal}>
+			<div class="modal-dialog" on:click|stopPropagation>
+				<div class="modal-dialog-header">
+					<h2 class="modal-title">{$t('calendar.modal.novoLembrete')}</h2>
+					<button
+						class="close-modal-button"
+						on:click={closeReminderModal}
+						aria-label={$t('calendar.modal.fechar')}
+					>
+						<XIcon size={20} />
+					</button>
 				</div>
-				<div class="modal-body">
-					<div class="form-group">
-						<label>Data: {formatDisplayDate(selectedDate)}</label>
-					</div>
-					<div class="form-group">
-						<label>Horário:</label>
-						<input type="time" bind:value={reminderTime} class="input" />
-					</div>
-					<div class="form-group">
-						<label>Descrição:</label>
+				<form class="modal-form" on:submit|preventDefault={addReminder}>
+					<div class="form-input-group">
+						<label for="reminder-date-display">{$t('calendar.modal.dataSelecionada')}</label>
 						<input
 							type="text"
-							bind:value={reminderText}
-							placeholder="Digite seu lembrete..."
-							class="input"
+							id="reminder-date-display"
+							readonly
+							value={formatDisplayDate(selectedDate)}
+							class="input-field readonly-display"
 						/>
 					</div>
-				</div>
-				<div class="modal-actions">
-					<button on:click={addReminder} class="btn-primary">Salvar</button>
-					<button on:click={closeModal} class="btn-secondary">Cancelar</button>
-				</div>
+					<div class="form-input-group">
+						<label for="reminder-time-input">{$t('calendar.modal.horario')}</label>
+						<input
+							type="time"
+							id="reminder-time-input"
+							bind:value={reminderTime}
+							class="input-field"
+						/>
+					</div>
+					<div class="form-input-group required-field">
+						<label for="reminder-text-input">{$t('calendar.modal.descricao')}</label>
+						<input
+							type="text"
+							id="reminder-text-input"
+							bind:value={reminderText}
+							placeholder={$t('calendar.modal.placeholderDescricao')}
+							class="input-field"
+							required
+						/>
+					</div>
+					<div class="modal-dialog-actions">
+						<button type="submit" class="button primary-button"
+							>{$t('calendar.modal.salvar')}</button
+						>
+						<button type="button" class="button secondary-button" on:click={closeReminderModal}
+							>{$t('calendar.modal.cancelar')}</button
+						>
+					</div>
+				</form>
 			</div>
 		</div>
 	{/if}
 </div>
 
 <style>
+	/* Estilos mantidos como na sua versão anterior */
 	:root {
-		--primary: #333;
-		--secondary: #555;
-		--background: #f5f5f5;
-		--text: #222;
-		--border-color: #ddd;
-		--light-gray: #e0e0e0;
-		--reminder-color: #fff3b0; /* Nova cor para fundo de lembrete */
-		--reminder-border: #ffd54f; /* Cor da borda para lembrete */
-		--reminder-indicator: #ff9800; /* Cor do indicador de lembrete */
+		--local-reminder-background: #fff3b0;
+		--local-reminder-border: #ffd54f;
+		--local-reminder-indicator: #ff9800;
 	}
-
-	.page-header {
+	.calendar-component-container {
+		background-color: var(--content-background-color);
+		color: var(--app-text-color);
+		border-radius: var(--radius);
 		display: flex;
-		justify-content: space-between;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+	.page-header-style {
+		display: flex;
 		align-items: center;
-		margin-bottom: 1.5rem;
 		padding-bottom: 1rem;
 		border-bottom: 1px solid var(--border-color);
 	}
-
-	.page-header h1 {
-		font-size: 28px;
-		color: var(--text);
+	.page-header-style h1 {
+		font-size: clamp(1.5rem, 4vw, 1.8rem);
+		color: var(--app-text-color);
 		margin: 0;
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.6rem;
+		font-weight: 600;
 	}
-
-	.calendar-container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 1.5rem;
-		background: white;
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	.calendar-header {
+	.calendar-controls {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1.5rem;
-		padding-bottom: 1rem;
+		padding: 0.5rem 0;
 	}
-
-	.btn-secondary {
-		background: var(--light-gray);
-		color: var(--text);
-		border: 1px solid var(--border-color);
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-		cursor: pointer;
-		transition: all 0.2s ease;
+	.current-month-year {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--app-text-color);
+		text-align: center;
+		flex-grow: 1;
 	}
-
-	.btn-secondary:hover {
-		background: #e0e0e0;
+	.month-nav-button {
+		padding: 0.5rem 0.8rem;
+		font-size: 1.2rem;
 	}
-
-	.calendar-grid {
+	.calendar-grid-layout {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
 		gap: 1px;
-		background: var(--border-color);
-		margin-bottom: 2rem;
+		background-color: var(--border-color);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		overflow: hidden;
 	}
-
-	.day-header {
-		background: var(--background);
-		padding: 1rem;
+	.day-name-header {
+		background-color: var(--card-background-color);
+		padding: 0.75rem 0.5rem;
 		text-align: center;
 		font-weight: 500;
-		color: var(--text);
-		border-bottom: 2px solid var(--border-color);
+		font-size: 0.85rem;
+		color: var(--text-color-muted, var(--app-text-color));
 	}
-
-	.day-cell {
-		background: white;
+	.day-cell-style {
+		background-color: var(--card-background-color);
 		min-height: 100px;
 		padding: 0.5rem;
 		position: relative;
 		cursor: pointer;
-		transition: all 0.2s ease;
-		border: 1px solid var(--border-color);
+		transition: background-color 0.2s ease;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
 	}
-
-	.day-cell:hover {
-		background: var(--background);
+	.day-cell-style:hover,
+	.day-cell-style:focus-visible {
+		background-color: var(--border-color);
+		outline: 2px solid var(--primary-color);
+		outline-offset: -2px;
 	}
-
-	.day-cell.other-month {
-		background: var(--background);
-		color: #999;
+	.day-cell-style.is-other-month {
+		background-color: var(--content-background-color);
+		color: var(--text-color-muted, var(--app-text-color));
+		cursor: default;
 	}
-
-	.day-cell.today {
-		background: var(--light-gray);
+	.day-cell-style.is-other-month:hover,
+	.day-cell-style.is-other-month:focus-visible {
+		background-color: var(--content-background-color);
+		outline: none;
+	}
+	.day-cell-style.is-today {
+		background-color: color-mix(in srgb, var(--primary-color) 15%, var(--card-background-color));
 		font-weight: 600;
-		border: 2px solid var(--primary);
+		border: 1px solid var(--primary-color);
 	}
-
-	/* Estilo para dias com lembretes */
-	.day-cell.has-reminder {
-		background: linear-gradient(to bottom right, var(--reminder-color) 0%, #ffecb3 100%);
-		border-right: 2px solid var(--reminder-border);
-		border-bottom: 2px solid var(--reminder-border);
+	.day-cell-style.is-today .day-number-display {
+		color: var(--primary-color);
+		font-weight: bold;
 	}
-
-	.day-cell.has-reminder:hover {
-		background: linear-gradient(to bottom right, #ffecb3 0%, #ffe082 100%);
+	.day-cell-style.has-reminder-style {
+		background-color: var(--local-reminder-background);
 	}
-
-	.day-cell.other-month.has-reminder {
-		background: linear-gradient(
-			to bottom right,
-			rgba(255, 243, 176, 0.5) 0%,
-			rgba(255, 236, 153, 0.6) 100%
-		);
+	.day-cell-style.has-reminder-style:hover {
+		background-color: color-mix(in srgb, var(--local-reminder-background) 80%, black);
 	}
-
-	.day-number {
-		display: block;
+	.day-number-display {
+		display: inline-block;
 		font-size: 0.9rem;
 		margin-bottom: 0.25rem;
+		padding: 0.1rem 0.3rem;
+		border-radius: var(--radius);
 	}
-
-	.reminder-indicator {
-		width: 8px;
-		height: 8px;
-		background: var(--reminder-indicator);
+	.reminder-dot-indicator {
+		width: 7px;
+		height: 7px;
+		background-color: var(--local-reminder-indicator);
 		border-radius: 50%;
 		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		box-shadow:
-			0 0 0 2px white,
-			0 0 0 3px var(--reminder-indicator);
+		top: 6px;
+		right: 6px;
 	}
-
-	.monthly-reminders {
-		border-top: 1px solid var(--border-color);
-		padding-top: 2rem;
+	.reminders-section {
 	}
-
-	.monthly-reminders h3 {
-		font-size: 1.25rem;
-		margin-bottom: 1.5rem;
-		color: var(--text);
+	.section-title {
+		font-size: 1.2rem;
+		font-weight: 600;
+		margin-bottom: 1rem;
+		color: var(--app-text-color);
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--border-color);
 	}
-
-	.reminder-group {
-		margin-bottom: 1.5rem;
+	.reminders-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
-
-	.reminder-group h4 {
-		font-size: 0.9rem;
-		color: #666;
+	.reminder-day-group {
+	}
+	.reminder-date-header {
+		font-size: 0.95rem;
+		color: var(--text-color-muted, var(--app-text-color));
 		margin: 0 0 0.5rem 0;
 		font-weight: 500;
 	}
-
-	.reminder-item {
+	.reminders-for-day {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.reminder-item-style {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		padding: 0.75rem;
-		margin-bottom: 0.5rem;
-		background: var(--background);
-		border-radius: 4px;
+		gap: 0.75rem;
+		padding: 0.6rem 0.8rem;
+		background-color: var(--card-background-color);
+		border-radius: var(--radius);
 		border: 1px solid var(--border-color);
+		border-left: 3px solid var(--local-reminder-border);
 	}
-
-	.reminder-item .time {
+	.reminder-time {
 		font-size: 0.85rem;
-		color: #666;
-		min-width: 60px;
+		color: var(--text-color-muted, var(--app-text-color));
+		min-width: 50px;
+		font-weight: 500;
 	}
-
-	.btn-icon {
-		background: none;
-		border: none;
-		padding: 0.25rem;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
+	.reminder-text {
+		flex-grow: 1;
+		font-size: 0.9rem;
 	}
-
-	.btn-icon.danger:hover {
-		color: var(--primary);
-	}
-
-	.empty {
-		color: #999;
+	.empty-message {
+		color: var(--text-color-muted, var(--app-text-color));
 		font-style: italic;
+		padding: 1rem;
+		text-align: center;
+		background-color: var(--content-background-color);
+		border-radius: var(--radius);
 	}
-
-	.modal-overlay {
+	.modal-backdrop {
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.7);
+		background-color: color-mix(in srgb, var(--app-background-color) 10%, black 60%);
 		display: grid;
 		place-items: center;
 		z-index: 1000;
+		padding: 1rem;
 	}
-
-	.modal-content {
-		background: white;
-		padding: 1.5rem;
-		border-radius: 8px;
-		width: 90%;
-		max-width: 400px;
+	.modal-dialog {
+		background-color: var(--card-background-color);
+		padding: clamp(1.25rem, 4vw, 1.75rem);
+		border-radius: var(--radius);
+		width: 100%;
+		max-width: 450px;
+		box-shadow: var(--shadow);
 		border: 1px solid var(--border-color);
 	}
-
-	.modal-header {
+	.modal-dialog-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 1rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-color);
 	}
-
-	.modal-header h3 {
-		margin: 0;
+	.modal-title {
 		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--app-text-color);
+		margin: 0;
 	}
-
-	.close-btn {
+	.close-modal-button {
 		background: none;
 		border: none;
 		font-size: 1.5rem;
 		cursor: pointer;
-		color: var(--text);
+		color: var(--text-color-muted, var(--app-text-color));
+		padding: 0 0.25rem;
+		line-height: 1;
 	}
-
-	.form-group {
-		margin-bottom: 1rem;
+	.close-modal-button:hover {
+		color: var(--app-text-color);
 	}
-
-	.form-group label {
-		display: block;
-		margin-bottom: 0.5rem;
-		color: var(--text);
-	}
-
-	.input {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-	}
-
-	.modal-actions {
+	.modal-form {
 		display: flex;
-		gap: 0.5rem;
-		margin-top: 1rem;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.form-input-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.form-input-group label {
+		font-weight: 500;
+		color: var(--app-text-color);
+		display: block;
+		font-size: 0.9rem;
+	}
+	.form-input-group.required-field label::after {
+		content: '*';
+		color: var(--danger-color);
+		margin-left: 0.2rem;
+	}
+	.input-field {
+		width: 100%;
+		padding: 0.65rem 0.85rem;
+		border: 1px solid var(--input-border-color);
+		border-radius: var(--radius);
+		font-size: 0.95rem;
+		font-family: inherit;
+		background-color: var(--input-background-color);
+		color: var(--app-text-color);
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+	.input-field:focus {
+		border-color: var(--primary-color);
+		outline: none;
+		box-shadow: 0 0 0 3px var(--input-focus-ring-color);
+	}
+	.input-field.readonly-display {
+		background-color: var(--content-background-color);
+		color: var(--text-color-muted);
+		cursor: default;
+	}
+	.modal-dialog-actions {
+		display: flex;
+		gap: 0.75rem;
 		justify-content: flex-end;
+		margin-top: 1rem;
 	}
-
-	.btn-primary {
-		background: var(--primary);
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 4px;
+	.button {
+		padding: 0.65rem 1.25rem;
+		border-radius: var(--radius);
 		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		font-weight: 500;
+		font-size: 0.9rem;
+		text-decoration: none;
+		border: 1px solid transparent;
+		transition:
+			background-color 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease,
+			opacity 0.2s ease;
 	}
-
+	.button:focus-visible {
+		outline: 2px solid var(--primary-color);
+		outline-offset: 2px;
+	}
+	.button.primary-button {
+		background-color: var(--primary-color);
+		color: var(--primary-color-text);
+		border-color: var(--primary-color);
+	}
+	.button.primary-button:hover {
+		background-color: var(--primary-color-hover);
+		border-color: var(--primary-color-hover);
+	}
+	.button.secondary-button {
+		background-color: var(--card-background-color);
+		color: var(--app-text-color);
+		border-color: var(--border-color);
+	}
+	.button.secondary-button:hover {
+		background-color: var(--border-color);
+	}
+	.icon-button {
+		background: none;
+		border: none;
+		padding: 0.3rem;
+		cursor: pointer;
+		color: var(--text-color-muted, var(--app-text-color));
+		display: inline-flex;
+		border-radius: var(--radius);
+	}
+	.icon-button:hover {
+		color: var(--primary-color);
+		background-color: var(--border-color);
+	}
+	.icon-button.danger:hover {
+		color: var(--danger-color);
+		background-color: color-mix(in srgb, var(--danger-color) 15%, transparent);
+	}
 	@media (max-width: 768px) {
-		.calendar-container {
+		.calendar-component-container {
 			padding: 1rem;
+			gap: 1rem;
 		}
-
-		.page-header h1 {
-			font-size: 24px;
+		.page-header-style h1 {
+			font-size: 1.4rem;
 		}
-
-		.day-cell {
-			min-height: 80px;
+		.current-month-year {
+			font-size: 1.1rem;
 		}
-
-		.reminder-item {
-			flex-wrap: wrap;
-			gap: 0.5rem;
-			padding: 0.5rem;
+		.day-cell-style {
+			min-height: 70px;
+			padding: 0.3rem;
+			font-size: 0.8rem;
+		}
+		.day-name-header {
+			padding: 0.5rem 0.25rem;
+			font-size: 0.75rem;
+		}
+		.reminder-item-style {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.3rem;
+		}
+		.modal-dialog {
+			max-width: calc(100% - 2rem);
+		}
+		.modal-dialog-actions {
+			flex-direction: column-reverse;
+		}
+		.modal-dialog-actions .button {
+			width: 100%;
 		}
 	}
 </style>
