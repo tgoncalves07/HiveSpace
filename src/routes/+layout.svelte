@@ -485,12 +485,7 @@
 	.sidebar-links a:hover {
 		background-color: var(--link-hover-background-color);
 	}
-	.sidebar-links a.dragging {
-		opacity: 0.4;
-		background-color: var(--link-active-background-color);
-		transform: scale(0.95);
-		border: 1px dashed var(--link-active-text-color);
-	}
+
 	.sidebar-links a.active {
 		background-color: var(--link-active-background-color);
 		color: var(--link-active-text-color);

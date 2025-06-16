@@ -9,19 +9,16 @@ export interface Note {
 	content: string;
 	createdAt: string; // Armazenar como string ISO para facilitar a serialização
 	updatedAt: string; // Armazenar como string ISO
-	// Poderia adicionar outros campos como 'tags', 'priority', 'status', etc. no futuro
 }
 
 // 2. Chave para o LocalStorage
 const NOTES_STORAGE_KEY = 'svelte-notes-app-data';
 
 // 3. Função para gerar IDs únicos (simples)
-// Para produção, considere usar uma biblioteca como 'uuid'
 function generateId(): string {
 	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
 		return crypto.randomUUID();
 	}
-	// Fallback simples se crypto.randomUUID não estiver disponível (ex: ambientes não seguros ou Node.js mais antigo sem --experimental-global-crypto)
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
@@ -32,7 +29,6 @@ function loadNotesFromLocalStorage(): Note[] {
 		if (storedNotes) {
 			try {
 				const parsedNotes = JSON.parse(storedNotes) as Note[];
-				// Validação básica para garantir que os dados são um array de notas
 				if (
 					Array.isArray(parsedNotes) &&
 					parsedNotes.every(
@@ -43,11 +39,10 @@ function loadNotesFromLocalStorage(): Note[] {
 				}
 			} catch (error) {
 				console.error('Erro ao parsear notas do localStorage:', error);
-				// Se houver erro, retorna um array vazio para não quebrar a aplicação
 			}
 		}
 	}
-	return []; // Retorna array vazio se não houver nada ou se estiver no SSR/ambiente sem localStorage
+	return [];
 }
 
 // 5. Criação da Store Writable
@@ -83,7 +78,7 @@ function updateNote(id: string, title: string, description: string = '', content
 		const noteIndex = notes.findIndex((note) => note.id === id);
 		if (noteIndex === -1) {
 			console.warn(`Nota com ID ${id} não encontrada para atualização.`);
-			return notes; // Retorna o array original se a nota não for encontrada
+			return notes;
 		}
 		const updatedNotes = [...notes];
 		updatedNotes[noteIndex] = {
@@ -106,18 +101,21 @@ function deleteNote(id: string): void {
 	});
 }
 
+// <-- ADICIONE ESTA FUNÇÃO
+/**
+ * Limpa todas as notas da store e do localStorage.
+ */
+function resetNotes(): void {
+	const emptyNotes: Note[] = [];
+	set(emptyNotes); // Limpa o estado da store
+	saveNotesToLocalStorage(emptyNotes); // Limpa o localStorage
+}
+
 // 8. Exportação da Store e funções
 export const notesStore = {
 	subscribe,
 	addNote,
 	updateNote,
-	deleteNote
-	// Você pode adicionar uma função 'setNotes' se precisar substituir todas as notas (ex: importação)
-	// setNotes: (newNotes: Note[]) => {
-	//   set(newNotes);
-	//   saveNotesToLocalStorage(newNotes);
-	// }
+	deleteNote,
+	reset: resetNotes // <-- EXPORTE O NOVO MÉTODO AQUI
 };
-
-// Garantir que a interface Note seja exportada para uso no componente
-// export type { Note }; // Já está exportada no topo

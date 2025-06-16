@@ -1,4 +1,3 @@
-<!-- routes/calendario/+page.svelte -->
 <script>
 	import Calendar from '$lib/components/Calendar.svelte';
 </script>

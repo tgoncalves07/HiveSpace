@@ -1,10 +1,11 @@
-//stores/tarefas.ts
+// lib/stores/tarefas.ts
+
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { Projeto } from './projetos';
 
-type Prioridade = 'baixa' | 'media' | 'alta';
-type StatusTarefa = 'Pendente' | 'Em Progresso' | 'Concluída' | 'Cancelada';
+// EXPORTANDO os tipos para que possam ser importados em outros lugares
+export type Prioridade = 'baixa' | 'media' | 'alta';
+export type StatusTarefa = 'Pendente' | 'Em Progresso' | 'Concluída' | 'Cancelada';
 
 export interface Tarefa {
 	id: number;
@@ -21,10 +22,20 @@ export interface Tarefa {
 function createPersistentTarefas() {
 	const { subscribe, set, update } = writable<Tarefa[]>([]);
 
+	// Função auxiliar para simplificar a persistência no localStorage
+	function persist(tarefas: Tarefa[]) {
+		if (browser) {
+			localStorage.setItem('tarefas', JSON.stringify(tarefas));
+		}
+		return tarefas;
+	}
+
 	const load = () => {
 		if (browser) {
 			const saved = localStorage.getItem('tarefas');
-			if (saved) set(JSON.parse(saved));
+			if (saved) {
+				set(JSON.parse(saved));
+			}
 		}
 	};
 
@@ -32,41 +43,32 @@ function createPersistentTarefas() {
 
 	return {
 		subscribe,
-		set: (value: Tarefa[]) => {
-			if (browser) localStorage.setItem('tarefas', JSON.stringify(value));
-			set(value);
-		},
+		set: (value: Tarefa[]) => set(persist(value)),
 		update: (updater: (value: Tarefa[]) => Tarefa[]) => {
-			update((current) => {
-				const updated = updater(current);
-				if (browser) localStorage.setItem('tarefas', JSON.stringify(updated));
-				return updated;
-			});
+			update((current) => persist(updater(current)));
 		},
 		adicionarTarefa: (novaTarefa: Omit<Tarefa, 'id' | 'dataCriacao'>) => {
 			const tarefaCompleta: Tarefa = {
 				...novaTarefa,
-				id: Date.now(),
+				id: Date.now() + Math.random(), // Garante um ID mais único
 				dataCriacao: new Date().toISOString()
 			};
-			update((tarefas) => {
-				const newTarefas = [...tarefas, tarefaCompleta];
-				if (browser) localStorage.setItem('tarefas', JSON.stringify(newTarefas));
-				return newTarefas;
-			});
+			update((tarefas) => persist([...tarefas, tarefaCompleta]));
 		},
-		atualizarTarefa: (id: number, novosDados: Partial<Tarefa>) => {
-			update((tarefas) => {
-				const updated = tarefas.map((t) => (t.id === id ? { ...t, ...novosDados } : t));
-				if (browser) localStorage.setItem('tarefas', JSON.stringify(updated));
-				return updated;
-			});
+		atualizarTarefa: (id: number, novosDados: Partial<Omit<Tarefa, 'id'>>) => {
+			update((tarefas) => persist(tarefas.map((t) => (t.id === id ? { ...t, ...novosDados } : t))));
 		},
 		removerTarefa: (id: number) => {
+			update((tarefas) => persist(tarefas.filter((t) => t.id !== id)));
+		},
+		// <<< A FUNÇÃO QUE FALTAVA FOI ADICIONADA AQUI! >>>
+		// Esta função é chamada quando uma tarefa é solta em uma nova coluna.
+		atualizarStatusTarefa: (id: number, novoStatus: StatusTarefa) => {
 			update((tarefas) => {
-				const filtered = tarefas.filter((t) => t.id !== id);
-				if (browser) localStorage.setItem('tarefas', JSON.stringify(filtered));
-				return filtered;
+				const tarefasAtualizadas = tarefas.map((t) =>
+					t.id === id ? { ...t, status: novoStatus } : t
+				);
+				return persist(tarefasAtualizadas);
 			});
 		},
 		load
@@ -75,6 +77,7 @@ function createPersistentTarefas() {
 
 export const tarefas = createPersistentTarefas();
 
+// As stores derivadas abaixo não precisam de alteração.
 export const estatisticasTarefas = derived(tarefas, ($tarefas) => ({
 	total: $tarefas.length,
 	porStatus: {

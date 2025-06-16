@@ -22,7 +22,7 @@
 	// --- DICIONÁRIO DE TRADUÇÕES PARA A PÁGINA DE NOTAS ---
 	const notesTranslations = {
 		pt: {
-			'notas.tituloPagina': 'Minhas Notas',
+			'notas.tituloPagina': ' As Minhas Notas',
 			'notas.pesquisarPlaceholder': 'Pesquisar notas...',
 			'notas.adicionar': 'Adicionar Nota',
 			'notas.stats.total': 'Total de Notas',
@@ -552,23 +552,7 @@
 		align-items: center;
 		gap: 1rem;
 	}
-	.stat-icon {
-		flex-shrink: 0;
-		padding: 0.6rem;
-		border-radius: 8px;
-	}
-	.stat-icon.total-icon {
-		background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
-		color: var(--primary-color);
-	}
-	.stat-icon.overdue-icon {
-		background-color: color-mix(in srgb, var(--warning-color) 15%, transparent);
-		color: var(--warning-color);
-	}
-	.stat-icon.high-priority-icon {
-		background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
-		color: var(--success-color);
-	}
+
 	.stat-content {
 		display: flex;
 		flex-direction: column;
@@ -676,7 +660,6 @@
 		margin-bottom: 0.75rem;
 		overflow: hidden;
 		display: -webkit-box;
-		-webkit-line-clamp: 3;
 		-webkit-box-orient: vertical;
 		word-break: break-word;
 	}
@@ -876,10 +859,7 @@
 		margin-bottom: 0.5rem;
 		justify-content: center;
 	}
-	.confirmation-modal .confirmation-icon {
-		color: var(--danger-color);
-		margin-right: 0.5rem;
-	}
+
 	.confirmation-message {
 		text-align: center;
 		font-size: 1.05rem;

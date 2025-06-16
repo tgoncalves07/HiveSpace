@@ -1,9 +1,10 @@
 <!-- routes/projetos/+page.svelte -->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
-	import { projetos as projetosStore, type Projeto } from '../../lib/stores/projetos'; // Mantém a store original de projetos
+	// CORREÇÃO: Renomear import para 'projetos' para consistência
+	import { projetos, type Projeto } from '../../lib/stores/projetos';
 	import { onMount } from 'svelte';
-	import { derived } from 'svelte/store'; // ESSENCIAL para a store 't' local
+	import { get, derived } from 'svelte/store';
 	import {
 		Plus,
 		Calendar,
@@ -15,22 +16,18 @@
 		BarChart,
 		Target,
 		CheckCircle,
-		X, // Para botão de fechar modal
+		X,
 		AlertCircle,
 		FileText,
 		Activity,
 		Filter
 	} from 'lucide-svelte';
 
-	// 1. Importar APENAS a store 'configuracoes' de pageStore.ts
-	//    A store 't' será definida localmente.
-	import { configuracoes } from '../../lib/stores/pageStore'; // VERIFIQUE ESTE CAMINHO
+	import { configuracoes } from '../../lib/stores/pageStore';
 
-	// 2. DICIONÁRIO DE TRADUÇÕES LOCAL para esta página (Projetos)
-	//    Certifique-se que TODAS as chaves usadas no template abaixo estão aqui.
 	const projectTranslations = {
 		pt: {
-			'projetos.tituloPagina': 'Meus Projetos',
+			'projetos.tituloPagina': 'Os Meus Projetos',
 			'projetos.filtro.todosStatus': 'Todos os Status',
 			'projetos.botao.novo': 'Novo Projeto',
 			'projetos.stats.total': 'Total de Projetos',
@@ -109,10 +106,8 @@
 			'projetos.modal.excluir.aviso': 'This action cannot be undone.',
 			'projetos.modal.excluir.confirmar': 'Delete Project'
 		}
-		// Adicionar outros idiomas aqui, se necessário
 	};
 
-	// 3. Store derivada 't' LOCAL, exatamente como na sua página de Notas.
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const selectedLang = $cfg.idioma;
@@ -129,7 +124,6 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	type Status = 'Ideia' | 'Pendente' | 'Em Processo' | 'Finalizado';
 
@@ -146,7 +140,6 @@
 	let dataPrazo = '';
 	let erroValidacao = '';
 
-	// Os labels dos statusOptions agora vêm das traduções e são reativos
 	$: statusOptions = [
 		{ value: 'Ideia' as Status, label: $t('projetos.coluna.ideia'), icon: Clock },
 		{ value: 'Pendente' as Status, label: $t('projetos.coluna.pendente'), icon: Activity },
@@ -199,18 +192,22 @@
 			return;
 		}
 
-		const projetoData: Omit<Projeto, 'id'> = {
+		// A descrição deve ser string, mesmo que vazia, ou undefined se o tipo permitir.
+		// O tipo na store foi ajustado para `descricao?: string`.
+		const projetoData = {
 			nome: nome.trim(),
-			descricao: descricao.trim(),
+			descricao: descricao.trim() || undefined,
 			status,
 			dataInicio: dataInicio || undefined,
 			dataPrazo: dataPrazo || undefined
 		};
 
 		if (editando && projetoId !== null) {
-			projetosStore.updateProjeto(projetoId, projetoData);
+			// A chamada agora corresponde ao método na store
+			projetos.updateProjeto(projetoId, projetoData);
 		} else {
-			projetosStore.addProjeto(projetoData);
+			// A chamada agora corresponde ao método na store
+			projetos.addProjeto(projetoData);
 		}
 
 		showModal = false;
@@ -219,29 +216,35 @@
 
 	function confirmarExclusao() {
 		if (projetoParaExcluir) {
-			projetosStore.removeProjeto(projetoParaExcluir.id);
+			// A chamada agora corresponde ao método na store
+			projetos.removeProjeto(projetoParaExcluir.id);
 			projetoParaExcluir = null;
 		}
 	}
 
 	const formatarDataDisplay = (dataString?: string): string => {
-		if (!dataString) return $t('projetos.card.dataNaoDisponivel');
+		const tFunc = get(t);
+		if (!dataString) return tFunc('projetos.card.dataNaoDisponivel');
+
 		try {
-			let langTag = $configuracoes.idioma || 'pt'; // Usa o idioma da store global
+			let langTag = get(configuracoes).idioma || 'pt';
+
 			if (langTag === 'pt') langTag = 'pt-PT';
-			else if (langTag === 'en')
-				langTag = 'en-GB'; // Formato comum para DD/MM/YYYY em inglês
+			else if (langTag === 'en') langTag = 'en-GB';
 			else if (langTag === 'es') langTag = 'es-ES';
 			else if (langTag === 'fr') langTag = 'fr-FR';
 
-			return new Date(dataString).toLocaleDateString(langTag, {
+			// A data vinda do input é 'YYYY-MM-DD'. Para evitar problemas de fuso horário,
+			// adicionamos 'T00:00:00' para garantir que é interpretada como o início do dia local.
+			const dateObj = new Date(dataString + 'T00:00:00');
+			return dateObj.toLocaleDateString(langTag, {
 				day: '2-digit',
 				month: '2-digit',
 				year: 'numeric'
 			});
 		} catch (e) {
 			console.warn('Erro ao formatar data display:', e);
-			return $t('projetos.card.dataInvalida');
+			return tFunc('projetos.card.dataInvalida');
 		}
 	};
 
@@ -253,19 +256,14 @@
 	}
 
 	$: projetosFiltrados =
-		filtro === 'todos' ? $projetosStore : $projetosStore.filter((p) => p.status === filtro);
+		filtro === 'todos' ? $projetos : $projetos.filter((p) => p.status === filtro);
 
-	$: projetosAtrasados = $projetosStore.filter(
+	$: projetosAtrasados = $projetos.filter(
 		(p) => p.dataPrazo && new Date(p.dataPrazo) < new Date() && p.status !== 'Finalizado'
 	);
-
-	// $: if ($configuracoes) { // Para depuração, se necessário
-	// 	console.log('[PROJETOS] Idioma da store configuracoes:', $configuracoes.idioma);
-	// 	console.log('[PROJETOS] Titulo Traduzido ($t):', $t('projetos.tituloPagina'));
-	// }
 </script>
 
-<!-- O TEMPLATE HTML abaixo já está traduzido usando as chaves definidas em projectTranslations -->
+<!-- O TEMPLATE HTML/MARKUP permanece o mesmo e já está correto -->
 <div class="page-container">
 	<header class="page-header">
 		<h1 class="page-title">{$t('projetos.tituloPagina')}</h1>
@@ -290,16 +288,14 @@
 		<div class="stat-card">
 			<BarChart size={20} class="stat-icon total-icon" />
 			<div class="stat-content">
-				<span class="stat-value">{$projetosStore.length}</span>
+				<span class="stat-value">{$projetos.length}</span>
 				<span class="stat-label">{$t('projetos.stats.total')}</span>
 			</div>
 		</div>
 		<div class="stat-card">
 			<Flag size={20} class="stat-icon high-priority-icon" />
 			<div class="stat-content">
-				<span class="stat-value"
-					>{$projetosStore.filter((p) => p.status === 'Finalizado').length}</span
-				>
+				<span class="stat-value">{$projetos.filter((p) => p.status === 'Finalizado').length}</span>
 				<span class="stat-label">{$t('projetos.stats.finalizados')}</span>
 			</div>
 		</div>
@@ -507,7 +503,7 @@
 </div>
 
 <style>
-	/* Cole aqui os seus estilos CSS originais para a página de projetos */
+	/* Seus estilos CSS permanecem inalterados */
 	.page-container {
 		max-width: 1300px;
 		margin: 0 auto;
@@ -585,29 +581,6 @@
 		transform: translateY(-2px);
 		box-shadow: 0 6px 12px -3px color-mix(in srgb, var(--shadow) 40%, transparent);
 	}
-	.stat-icon {
-		flex-shrink: 0;
-		padding: 0.6rem;
-		border-radius: 8px; /* Adaptei para consistência com o card */
-	}
-	.stat-icon.total-icon {
-		/* Cor exemplo */
-		background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
-		color: var(--primary-color);
-	}
-	.stat-icon.high-priority-icon {
-		/* Exemplo para "Finalizados", pode ser success-color */
-		background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
-		color: var(--success-color);
-	}
-	.stat-icon.overdue-icon {
-		background-color: color-mix(
-			in srgb,
-			var(--danger-color) 15%,
-			transparent
-		); /* Era warning, mudei para danger para Atrasados */
-		color: var(--danger-color);
-	}
 	.stat-content {
 		display: flex;
 		flex-direction: column;
@@ -640,7 +613,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		min-height: 50vh; /* Ajustado */
+		min-height: 50vh;
 	}
 	.column-header {
 		display: flex;
@@ -651,7 +624,7 @@
 		color: var(--app-text-color);
 		padding-bottom: 0.75rem;
 		border-bottom: 1px solid var(--border-color);
-		margin-bottom: 0.5rem; /* Era margin:0 0 1rem 0 */
+		margin-bottom: 0.5rem;
 	}
 	.column-header :global(svg) {
 		color: var(--text-color-muted, var(--app-text-color));
@@ -668,25 +641,21 @@
 		font-weight: 500;
 	}
 	.tasks-list {
-		/* Lista de projetos dentro da coluna */
 		display: flex;
 		flex-direction: column;
 		gap: 0.85rem;
-		min-height: 100px; /* Para garantir que a área de drop é visível */
+		min-height: 100px;
 		flex-grow: 1;
 	}
 	.tarefa-card {
-		/* Card de Projeto */
 		background-color: var(--card-background-color);
 		padding: 1rem;
-		border-radius: var(--radius); /* Era 8px */
+		border-radius: var(--radius);
 		box-shadow: var(--shadow);
-		/* cursor: grab; Não tem drag-and-drop aqui por enquanto */
 		transition:
 			transform 0.15s ease,
 			box-shadow 0.15s ease;
 		border: 1px solid var(--border-color);
-		/* border-left: 4px solid transparent; Se quiser indicador de cor */
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
@@ -698,7 +667,7 @@
 	.tarefa-card-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: flex-start; /* Era center */
+		align-items: flex-start;
 		gap: 0.5rem;
 	}
 	.tarefa-identifier {
@@ -706,21 +675,19 @@
 		align-items: center;
 		gap: 0.5rem;
 		flex-grow: 1;
-		min-width: 0; /* Para truncamento de texto */
+		min-width: 0;
 	}
 	.tarefa-description {
-		/* Nome do projeto */
 		font-weight: 600;
 		color: var(--app-text-color);
 		line-height: 1.3;
 		word-break: break-word;
 	}
 	.project-description {
-		/* Descrição do projeto, dentro do card */
 		font-size: 0.9rem;
 		color: var(--text-color-muted, var(--app-text-color));
 		line-height: 1.5;
-		margin-bottom: 0.3rem; /* Adicionado */
+		margin-bottom: 0.3rem;
 	}
 	.tarefa-action-buttons {
 		display: flex;
@@ -961,10 +928,7 @@
 		margin-bottom: 0.5rem;
 		justify-content: center;
 	}
-	.confirmation-modal .confirmation-icon {
-		color: var(--danger-color);
-		margin-right: 0.5rem;
-	}
+
 	.confirmation-message {
 		text-align: center;
 		font-size: 1.05rem;

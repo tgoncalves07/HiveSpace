@@ -55,7 +55,7 @@
 			'sobre.nome.itemSpace':
 				'<strong>Space:</strong> Symbolizes a pleasant and productive work environment.',
 			'sobre.nome.conclusao':
-				'Together, they form the vision of an efficient workspace where tasks flow組織edly like in a beehive.',
+				'Together, they form the vision of an efficient workspace where tasks flow organizedly like in a beehive.',
 			'sobre.tecnologias.titulo': 'Technologies Used',
 			'sobre.tecnologias.intro':
 				'The application was developed using the following main technologies:',
@@ -94,12 +94,6 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
-
-	// $: if ($configuracoes) { // Para depuração
-	//  console.log('[SOBRE] Idioma da store configuracoes:', $configuracoes.idioma);
-	//  console.log('[SOBRE] Titulo Traduzido ($t):', $t('sobre.tituloPagina'));
-	// }
 </script>
 
 <div class="page-container" in:fade={{ duration: 300 }}>
@@ -231,7 +225,7 @@
 		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 		gap: 0.75rem;
 		padding-left: 0;
-		list-style: none;
+		list-style-type: none; /* <-- CORREÇÃO APLICADA AQUI */
 	}
 	.tech-list-style li {
 		background-color: var(--content-background-color);
@@ -245,6 +239,7 @@
 		transition:
 			background-color 0.2s ease,
 			border-color 0.2s ease;
+		list-style-type: none;
 	}
 	.tech-list-style li:hover {
 		background-color: var(--border-color);

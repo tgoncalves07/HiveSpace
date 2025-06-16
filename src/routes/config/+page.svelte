@@ -2,16 +2,21 @@
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
-	import { derived } from 'svelte/store';
+	import { derived, get } from 'svelte/store';
+
 	import {
 		configuracoes,
 		type Tema,
 		type Idioma,
 		type ConfiguracoesState,
-		// type PrioridadeTarefa, // Removido
-		// type TipoLembreteTarefa, // Removido
 		getAppDefaults
 	} from '../../lib/stores/pageStore';
+	import { projetos } from '../../lib/stores/projetos';
+	import { tarefas } from '../../lib/stores/tarefas';
+	import { notesStore } from '../../lib/stores/notesStores';
+	import { reminders } from '../../lib/stores/reminders';
+
+	// Ícones
 	import {
 		Settings,
 		Globe,
@@ -25,9 +30,9 @@
 		Trash2,
 		AlertTriangle,
 		CheckCircle,
-		Monitor
-		// ClipboardCheck, // Removido
-		// Bell // Removido
+		Monitor,
+		HelpCircle,
+		Send
 	} from 'lucide-svelte';
 
 	// --- DICIONÁRIO DE TRADUÇÕES ---
@@ -42,16 +47,12 @@
 			'config.dados.exportar': 'Exportar Todos os Dados',
 			'config.dados.importar': 'Importar Dados',
 			'config.dados.exportarInfo':
-				'Crie um ficheiro de backup com as suas configurações e dados de projetos. Guarde este ficheiro num local seguro.',
+				'Crie um ficheiro de backup com as suas configurações, projetos, tarefas, notas e lembretes. Guarde este ficheiro num local seguro.',
 			'config.dados.importarInfo':
-				'Restaure as suas configurações e dados de projetos a partir de um ficheiro de backup previamente exportado.',
-			// Seção de Tarefas Removida das Traduções
-			// 'config.tarefas.titulo': 'Padrões de Tarefas',
-			// 'config.tarefas.prioridadePadrao': 'Prioridade Padrão',
-			// ...
+				'Restaure as suas configurações e dados de projetos, tarefas, notas e lembretes a partir de um ficheiro de backup previamente exportado.',
 			'config.perigo.titulo': 'Opções de Restauro',
 			'config.perigo.repor': 'Repor Configurações Padrão',
-			'config.perigo.eliminar': 'Eliminar Todos os Dados de Projetos',
+			'config.perigo.eliminar': 'Eliminar Todos os Dados da Aplicação',
 			'config.temas.claro': 'Claro',
 			'config.temas.escuro': 'Escuro',
 			'config.temas.sistema': 'Sistema',
@@ -64,7 +65,7 @@
 			'config.mensagens.erroImportar': 'Erro ao importar dados. Ficheiro inválido ou corrompido.',
 			'config.mensagens.erroLerFicheiro': 'Erro ao ler o ficheiro.',
 			'config.mensagens.dadosEliminados':
-				'Todos os dados de projetos foram eliminados e as configurações repostas.',
+				'Todos os dados da aplicação foram eliminados e as configurações repostas.',
 			'modal.repor.titulo': 'Repor Configurações',
 			'modal.repor.descricao':
 				'Tem a certeza de que deseja repor todas as configurações para os valores padrão? Esta ação não afetará os seus projetos e tarefas guardados.',
@@ -72,18 +73,23 @@
 			'modal.repor.confirmar': 'Confirmar Reposição',
 			'modal.exportar.titulo': 'Exportar Todos os Dados',
 			'modal.exportar.descricao':
-				'Será criado um ficheiro JSON contendo todas as suas configurações atuais e os dados de todos os seus projetos e tarefas. Guarde este ficheiro num local seguro para poder restaurá-lo mais tarde, se necessário.',
-			'modal.exportar.exportar': 'Exportar Agora',
-			'modal.eliminar.titulo': 'Eliminar Dados de Projetos e Tarefas',
+				'Será criado um ficheiro JSON contendo todas as suas configurações atuais e os dados de todos os seus projetos, tarefas, notas e lembretes. Guarde este ficheiro num local seguro para poder restaurá-lo mais tarde, se necessário.',
+			'modal.exportar.exportar': 'Exportar',
+			'modal.eliminar.titulo': 'Eliminar Todos os Dados da Aplicação',
 			'modal.eliminar.atencao': 'ATENÇÃO: Esta ação é irreversível!',
 			'modal.eliminar.descricao':
-				'Todos os seus projetos e tarefas (guardados localmente no navegador) serão permanentemente eliminados. As configurações da aplicação serão repostas para os valores padrão.',
+				'Todos os seus projetos, tarefas, notas e lembretes (guardados localmente no navegador) serão permanentemente eliminados. As configurações da aplicação serão repostas para os valores padrão.',
 			'modal.eliminar.avisoBackup':
 				'RECOMENDAÇÃO: Exporte os seus dados antes de continuar, caso deseje ter um backup.',
-			'modal.eliminar.confirmar': 'Sim, Eliminar Tudo'
+			'modal.eliminar.confirmar': 'Sim, Eliminar Tudo',
+			'config.suporte.titulo': 'Suporte e Feedback',
+			'config.suporte.info':
+				'Tem alguma dúvida, sugestão ou encontrou um problema? Envie-nos uma mensagem. Esta ação abrirá o seu cliente de email padrão.',
+			'config.suporte.email': 'O seu Email (para podermos responder)',
+			'config.suporte.mensagem': 'A sua Mensagem',
+			'config.suporte.enviar': 'Enviar Mensagem'
 		},
 		en: {
-			// Lembre-se de atualizar o inglês também
 			'config.titulo': 'Settings',
 			'config.salvar': 'Save Changes',
 			'config.aparencia.titulo': 'Appearance',
@@ -93,12 +99,12 @@
 			'config.dados.exportar': 'Export All Data',
 			'config.dados.importar': 'Import Data',
 			'config.dados.exportarInfo':
-				'Create a backup file with your settings and project data. Store this file in a safe place.',
+				'Create a backup file with your settings, projects, tasks, notes, and reminders. Store this file in a safe place.',
 			'config.dados.importarInfo':
-				'Restore your settings and project data from a previously exported backup file.',
+				'Restore your settings and data for projects, tasks, notes, and reminders from a previously exported backup file.',
 			'config.perigo.titulo': 'Reset Options',
 			'config.perigo.repor': 'Reset Settings to Default',
-			'config.perigo.eliminar': 'Delete All Project Data',
+			'config.perigo.eliminar': 'Delete All Application Data',
 			'config.temas.claro': 'Light',
 			'config.temas.escuro': 'Dark',
 			'config.temas.sistema': 'System',
@@ -110,7 +116,8 @@
 			'config.mensagens.erroExportar': 'Error exporting data. Check console.',
 			'config.mensagens.erroImportar': 'Error importing data. Invalid or corrupted file.',
 			'config.mensagens.erroLerFicheiro': 'Error reading file.',
-			'config.mensagens.dadosEliminados': 'All project data has been deleted and settings reset.',
+			'config.mensagens.dadosEliminados':
+				'All application data has been deleted and settings reset.',
 			'modal.repor.titulo': 'Reset Settings',
 			'modal.repor.descricao':
 				'Are you sure you want to reset all settings to their default values? This action will not affect your saved projects and tasks.',
@@ -118,15 +125,21 @@
 			'modal.repor.confirmar': 'Confirm Reset',
 			'modal.exportar.titulo': 'Export All Data',
 			'modal.exportar.descricao':
-				'A JSON file will be created containing all your current settings and data for all your projects and tasks. Save this file in a secure location so you can restore it later if needed.',
-			'modal.exportar.exportar': 'Export Now',
-			'modal.eliminar.titulo': 'Delete Project and Task Data',
+				'A JSON file will be created containing all your current settings and data for all your projects, tasks, notes, and reminders. Save this file in a secure location so you can restore it later if needed.',
+			'modal.exportar.exportar': 'Export',
+			'modal.eliminar.titulo': 'Delete All Application Data',
 			'modal.eliminar.atencao': 'WARNING: This action is irreversible!',
 			'modal.eliminar.descricao':
-				'All your projects and tasks (saved locally in the browser) will be permanently deleted. Application settings will be reset to their default values.',
+				'All your projects, tasks, notes, and reminders (saved locally in the browser) will be permanently deleted. Application settings will be reset to their default values.',
 			'modal.eliminar.avisoBackup':
 				'RECOMMENDATION: Export your data before proceeding if you wish to have a backup.',
-			'modal.eliminar.confirmar': 'Yes, Delete Everything'
+			'modal.eliminar.confirmar': 'Yes, Delete Everything',
+			'config.suporte.titulo': 'Support & Feedback',
+			'config.suporte.info':
+				'Have a question, suggestion, or found an issue? Send us a message. This action will open your default email client.',
+			'config.suporte.email': 'Your Email (so we can reply)',
+			'config.suporte.mensagem': 'Your Message',
+			'config.suporte.enviar': 'Send Message'
 		}
 	};
 
@@ -150,6 +163,8 @@
 	let mensagemErro = '';
 	let alteracoesPendentes = false;
 	let configuracoesIniciaisString = '';
+	let suporteEmail = '';
+	let suporteMensagem = '';
 
 	const idiomasDisponiveis = [
 		{ valor: 'pt' as Idioma, nome: 'Português' },
@@ -161,10 +176,6 @@
 		{ valor: 'escuro' as Tema, nome: $t('config.temas.escuro'), icone: Moon },
 		{ valor: 'sistema' as Tema, nome: $t('config.temas.sistema'), icone: Monitor }
 	];
-
-	// prioridadesTarefa e lembretesTarefa removidos
-	// $: prioridadesTarefa = [ ... ];
-	// $: lembretesTarefa = [ ... ];
 
 	onMount(() => {
 		configuracoesIniciaisString = JSON.stringify($configuracoes);
@@ -189,10 +200,14 @@
 		try {
 			const dadosParaExportar = {
 				configuracoes: $configuracoes,
-				projetos: JSON.parse(localStorage.getItem('projetos') || '[]'),
+				projetos: get(projetos),
+				tarefas: get(tarefas),
+				notas: get(notesStore),
+				reminders: get(reminders),
 				versaoApp: '1.0.0',
 				dataExportacao: new Date().toISOString()
 			};
+
 			const blob = new Blob([JSON.stringify(dadosParaExportar, null, 2)], {
 				type: 'application/json'
 			});
@@ -222,35 +237,70 @@
 		reader.onload = (e) => {
 			try {
 				const dadosImportados = JSON.parse(e.target?.result as string);
+				let algumaCoisaImportada = false;
 
 				if (dadosImportados.configuracoes && typeof dadosImportados.configuracoes === 'object') {
-					const appDefaults = getAppDefaults();
-					// Remover campos obsoletos dos dados importados antes do merge
-					const {
-						formatoHora,
-						prioridadePadraoTarefa,
-						lembretePadraoTarefa,
-						...configImportadaLimpa
-					} = dadosImportados.configuracoes as any;
-					const mergedConfig = { ...appDefaults, ...configImportadaLimpa };
-					configuracoes.set(mergedConfig as ConfiguracoesState);
-				} else {
-					console.warn(
-						'Dados de configuração não encontrados ou em formato inválido no ficheiro importado.'
-					);
+					try {
+						const appDefaults = getAppDefaults();
+						const {
+							formatoHora,
+							prioridadePadraoTarefa,
+							lembretePadraoTarefa,
+							...configImportadaLimpa
+						} = dadosImportados.configuracoes as any;
+						const mergedConfig = { ...appDefaults, ...configImportadaLimpa };
+						configuracoes.set(mergedConfig as ConfiguracoesState);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'configuracoes':", err);
+					}
 				}
-
 				if (dadosImportados.projetos) {
-					localStorage.setItem('projetos', JSON.stringify(dadosImportados.projetos));
-				} else {
-					console.warn('Dados de projetos não encontrados no ficheiro importado.');
+					try {
+						projetos.set(dadosImportados.projetos);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'projetos':", err);
+					}
+				}
+				if (dadosImportados.tarefas) {
+					try {
+						tarefas.set(dadosImportados.tarefas);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'tarefas':", err);
+					}
+				}
+				if (dadosImportados.notas) {
+					try {
+						// Para stores customizadas, use os métodos que você criou
+						notesStore.reset(); // Limpa a store antes de adicionar
+						dadosImportados.notas.forEach((note) => {
+							notesStore.addNote(note.title, note.description, note.content);
+						});
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'notas':", err);
+					}
+				}
+				if (dadosImportados.reminders) {
+					try {
+						reminders.set(dadosImportados.reminders);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'reminders':", err);
+					}
 				}
 
-				configuracoesIniciaisString = JSON.stringify($configuracoes);
-				alteracoesPendentes = false;
-				mostrarMensagem($t('config.mensagens.importadoSucesso'), 'sucesso');
+				if (algumaCoisaImportada) {
+					configuracoesIniciaisString = JSON.stringify($configuracoes);
+					alteracoesPendentes = false;
+					mostrarMensagem($t('config.mensagens.importadoSucesso'), 'sucesso');
+				} else {
+					throw new Error('O ficheiro JSON não continha nenhuma secção de dados válida.');
+				}
 			} catch (erro) {
-				console.error('Erro ao importar dados:', erro);
+				console.error('Erro geral ao importar dados:', erro);
 				mostrarMensagem($t('config.mensagens.erroImportar'), 'erro');
 			} finally {
 				input.value = '';
@@ -264,12 +314,36 @@
 	}
 
 	function eliminarTodosDados() {
-		localStorage.removeItem('projetos');
-		configuracoes.reset();
 		showDeleteModal = false;
+
+		// Limpar todos os dados do localStorage
+		localStorage.removeItem('projetos');
+		localStorage.removeItem('tarefas');
+		localStorage.removeItem('reminders');
+		localStorage.removeItem('svelte-notes-app-data');
+
+		// Resetar as stores ativas para refletir a limpeza
+		projetos.set([]);
+		tarefas.set([]);
+		notesStore.reset(); // <-- AQUI ESTÁ A CORREÇÃO: Use o método reset() em vez de set()
+		reminders.set({});
+
+		// Resetar as configurações da aplicação
+		configuracoes.reset();
+
+		// Mostra a mensagem de sucesso e atualiza o estado
 		mostrarMensagem($t('config.mensagens.dadosEliminados'), 'sucesso');
 		configuracoesIniciaisString = JSON.stringify($configuracoes);
 		alteracoesPendentes = false;
+	}
+
+	function enviarMensagemSuporte() {
+		const destinatario = 'hivespace.suport@gmail.com';
+		const assunto = encodeURIComponent('Mensagem de Suporte da Aplicação');
+		const corpo = encodeURIComponent(
+			`O meu email de contacto: ${suporteEmail}\n\n---------------------------------\n\nMensagem:\n${suporteMensagem}`
+		);
+		window.location.href = `mailto:${destinatario}?subject=${assunto}&body=${corpo}`;
 	}
 
 	function mostrarMensagem(mensagem: string, tipo: 'sucesso' | 'erro') {
@@ -296,6 +370,7 @@
 	}
 </script>
 
+<!-- O HTML e CSS permanecem os mesmos -->
 <div class="configuracoes-container">
 	<header>
 		<h1><Settings size={28} /> {$t('config.titulo')}</h1>
@@ -397,13 +472,42 @@
 			</div>
 		</section>
 
-		<!-- SECÇÃO PADRÕES DE TAREFAS (REMOVIDA) -->
-		<!--
+		<!-- SECÇÃO SUPORTE E FEEDBACK -->
 		<section class="config-secao">
-			<h2><ClipboardCheck size={20} /> {$t('config.tarefas.titulo')}</h2>
-			...
+			<h2><HelpCircle size={20} /> {$t('config.suporte.titulo')}</h2>
+			<p class="info-text">{$t('config.suporte.info')}</p>
+
+			<div class="config-item">
+				<label for="suporte-email">{$t('config.suporte.email')}</label>
+				<input
+					id="suporte-email"
+					type="email"
+					class="input"
+					bind:value={suporteEmail}
+					placeholder="seu.email@exemplo.com"
+				/>
+			</div>
+
+			<div class="config-item">
+				<label for="suporte-mensagem">{$t('config.suporte.mensagem')}</label>
+				<textarea
+					id="suporte-mensagem"
+					class="input"
+					rows="5"
+					bind:value={suporteMensagem}
+					placeholder={$t('config.suporte.mensagem')}
+				/>
+			</div>
+
+			<button
+				class="btn btn-primary btn-full-width"
+				on:click={enviarMensagemSuporte}
+				disabled={!suporteEmail.includes('@') || suporteMensagem.trim() === ''}
+			>
+				<Send size={16} />
+				{$t('config.suporte.enviar')}
+			</button>
 		</section>
-		-->
 
 		<!-- SECÇÃO PERIGO / REPOSIÇÃO -->
 		<section class="config-secao">
@@ -420,7 +524,7 @@
 		</section>
 	</div>
 
-	<!-- MODAIS (sem alterações na estrutura, apenas textos podem ter mudado) -->
+	<!-- MODAIS -->
 	{#if showResetModal}
 		<div
 			class="modal-overlay"
@@ -515,7 +619,6 @@
 </div>
 
 <style>
-	/* Estilos atualizados para usar variáveis CSS do seu app.css */
 	.info-text {
 		font-size: 0.9rem;
 		color: var(--app-text-color);
@@ -524,9 +627,7 @@
 		margin-top: 0.25rem;
 		line-height: 1.5;
 	}
-	html[data-tema='escuro'] .info-text {
-		opacity: 0.75;
-	}
+
 	.btn-full-width {
 		width: 100%;
 	}
@@ -616,10 +717,6 @@
 		flex-direction: column;
 		gap: 0.4rem; /* Espaço entre label e input/botão */
 	}
-	/* .config-item label:not(.btn),
-    .config-item > .tema-opcoes {
-		margin-bottom: 0.25rem; // Removido, o gap do .config-item já faz isso
-	} */
 
 	.config-item label,
 	label.btn {
@@ -636,50 +733,60 @@
 		font-size: 0.9rem; /* Consistência com outros botões */
 		padding: 0.6rem 1rem;
 	}
+
 	.input,
-	select.input {
+	select.input,
+	textarea.input {
 		width: 100%;
-		padding: 0.65rem 0.9rem; /* Padding ajustado */
+		padding: 0.65rem 0.9rem;
 		border: 1px solid var(--input-border-color);
 		background-color: var(--input-background-color);
 		color: var(--app-text-color);
 		border-radius: var(--radius);
-		font-size: 0.95rem; /* Tamanho do texto do input */
+		font-size: 0.95rem;
 		transition:
 			border-color 0.2s ease,
 			box-shadow 0.2s ease;
 		font-family: inherit;
 	}
+
+	textarea.input {
+		resize: vertical;
+		min-height: 100px;
+	}
+
 	select.input option {
 		background-color: var(--input-background-color);
 		color: var(--app-text-color);
 	}
 
 	.input:disabled,
-	select.input:disabled {
-		opacity: 0.6; /* Ajustado */
+	select.input:disabled,
+	textarea.input:disabled {
+		opacity: 0.6;
 		cursor: not-allowed;
-		background-color: var(--content-background-color); /* Fundo diferente para desabilitado */
-		color: var(--text-color-muted); /* Cor de texto para desabilitado */
+		background-color: var(--content-background-color);
+		color: var(--text-color-muted);
 		border-color: var(--border-color);
 	}
+
 	.input:focus,
-	select.input:focus {
+	select.input:focus,
+	textarea.input:focus {
 		border-color: var(--primary-color);
 		outline: none;
 		box-shadow: 0 0 0 3px var(--input-focus-ring-color);
 	}
 	.tema-opcoes {
 		display: flex;
-		gap: 0.5rem; /* Espaçamento entre botões de tema */
+		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 	.tema-btn {
-		/* Estilo base para botões de tema */
 		background-color: var(--content-background-color);
 		color: var(--app-text-color);
 		border: 1px solid var(--border-color);
-		padding: 0.5rem 0.8rem; /* Padding para botões de tema */
+		padding: 0.5rem 0.8rem;
 		font-size: 0.85rem;
 	}
 	.tema-btn:hover:not(.ativo) {
@@ -696,13 +803,11 @@
 		border-color: var(--primary-color);
 	}
 	.tema-btn.ativo:hover {
-		/* Hover do botão ativo pode ser sutil */
 		background-color: var(--primary-color-hover);
 	}
 
 	.btn {
-		/* Estilo base para todos os botões */
-		padding: 0.6rem 1.1rem; /* Padding geral dos botões */
+		padding: 0.6rem 1.1rem;
 		border-radius: var(--radius);
 		cursor: pointer;
 		display: inline-flex;
@@ -710,7 +815,7 @@
 		justify-content: center;
 		gap: 0.5rem;
 		font-weight: 500;
-		font-size: 0.9rem; /* Tamanho de fonte dos botões */
+		font-size: 0.9rem;
 		text-decoration: none;
 		border: 1px solid transparent;
 		transition:
@@ -726,7 +831,7 @@
 	}
 	.btn:disabled {
 		cursor: not-allowed;
-		opacity: 0.5; /* Opacidade geral para desabilitado */
+		opacity: 0.5;
 	}
 	.btn-primary {
 		background-color: var(--primary-color);
@@ -740,7 +845,7 @@
 	.btn-primary:disabled {
 		background-color: var(--secondary-color);
 		border-color: var(--secondary-color);
-		color: var(--secondary-color-text); /* Ajustar se secundário for claro */
+		color: var(--secondary-color-text);
 	}
 	.btn-secondary {
 		background-color: var(--content-background-color);
@@ -748,7 +853,7 @@
 		border: 1px solid var(--border-color);
 	}
 	.btn-secondary:hover:not(:disabled) {
-		background-color: var(--border-color); /* Ou um tom mais escuro/claro */
+		background-color: var(--border-color);
 		border-color: var(--app-text-color);
 	}
 	.btn-secondary:disabled {
@@ -758,30 +863,19 @@
 	}
 	.btn-warning {
 		background-color: var(--warning-color);
-		color: var(--app-text-color); /* Ajustar se warning for muito claro */
+		color: var(--app-text-color);
 		border-color: var(--warning-color);
 	}
-	html[data-tema='claro'] .btn-warning {
-		/* Exemplo para texto em botão warning claro */
-		color: #42200e; /* Texto escuro para melhor contraste no tema claro */
-	}
 	.btn-warning:hover:not(:disabled) {
-		background-color: color-mix(
-			in srgb,
-			var(--warning-color) 85%,
-			black 15%
-		); /* Escurecer warning no hover */
+		background-color: color-mix(in srgb, var(--warning-color) 85%, black 15%);
 		border-color: color-mix(in srgb, var(--warning-color) 85%, black 15%);
 	}
 	.btn-danger {
 		background-color: var(--danger-color);
-		color: var(--primary-color-text); /* Assumindo que --danger-color é escuro o suficiente */
+		color: var(--primary-color-text);
 		border-color: var(--danger-color);
 	}
-	html[data-tema='escuro'] .btn-danger {
-		/* No tema escuro, a cor do texto pode precisar ser escura se --danger-color for clara */
-		color: #450a0a;
-	}
+
 	.btn-danger:hover:not(:disabled) {
 		background-color: var(--danger-color-hover);
 		border-color: var(--danger-color-hover);
@@ -792,13 +886,17 @@
 		flex-wrap: wrap;
 		margin-top: 0.5rem;
 	}
+	/* Adicionado para espaçar o botão de envio na seção de suporte */
+	.config-secao > .btn-full-width {
+		margin-top: 0.5rem;
+	}
 	.modal-overlay {
 		position: fixed;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		background-color: rgba(0, 0, 0, 0.75); /* Overlay mais escuro */
+		background-color: rgba(0, 0, 0, 0.75);
 		display: grid;
 		place-items: center;
 		z-index: 1000;
@@ -807,10 +905,10 @@
 	.modal-content {
 		background: var(--card-background-color);
 		color: var(--app-text-color);
-		padding: clamp(1.25rem, 4vw, 1.75rem); /* Padding do modal ajustado */
+		padding: clamp(1.25rem, 4vw, 1.75rem);
 		border-radius: var(--radius);
 		width: 100%;
-		max-width: 500px; /* Max-width do modal */
+		max-width: 500px;
 		max-height: 90vh;
 		overflow-y: auto;
 		box-shadow: var(--shadow);
@@ -820,8 +918,8 @@
 		outline: none;
 	}
 	.modal-content h2 {
-		margin: 0 0 1.25rem 0; /* Espaçamento do título do modal */
-		font-size: 1.25rem; /* Tamanho do título do modal */
+		margin: 0 0 1.25rem 0;
+		font-size: 1.25rem;
 		color: var(--app-text-color);
 		display: flex;
 		align-items: center;
@@ -831,9 +929,9 @@
 	}
 	.modal-content p {
 		margin-bottom: 1rem;
-		line-height: 1.6; /* Ajuste de line-height */
+		line-height: 1.6;
 		color: var(--text-color-muted);
-		font-size: 0.9rem; /* Tamanho do texto do parágrafo no modal */
+		font-size: 0.9rem;
 	}
 	.modal-content p strong {
 		color: var(--app-text-color);
@@ -850,9 +948,9 @@
 	.aviso-exclusao {
 		background-color: var(--danger-background-color);
 		color: var(--danger-text-color);
-		padding: 0.8rem 1rem; /* Padding do aviso */
+		padding: 0.8rem 1rem;
 		border-radius: var(--radius);
-		border-left: 3px solid var(--danger-color); /* Borda mais sutil */
+		border-left: 3px solid var(--danger-color);
 		font-size: 0.85rem;
 	}
 

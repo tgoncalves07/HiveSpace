@@ -1,12 +1,12 @@
-<!-- routes/tarefas/+page.svelte (ou o nome correto da sua página de tarefas) -->
+<!-- routes/tarefas/+page.svelte -->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
 	import { projetos } from '../../lib/stores/projetos'; // Store de projetos
 	import {
 		tarefas as tarefasStore, // Renomeado para tarefasStore para evitar conflito
 		type Tarefa,
-		type StatusTarefa,
-		type Prioridade
+		type StatusTarefa, // Agora importa o tipo REAL da store
+		type Prioridade // Agora importa o tipo REAL da store
 	} from '../../lib/stores/tarefas';
 	import { onMount } from 'svelte';
 	import { derived } from 'svelte/store'; // ESSENCIAL para a store 't' local
@@ -36,7 +36,7 @@
 	//    Certifique-se que TODAS as chaves usadas no template abaixo estão aqui.
 	const taskTranslations = {
 		pt: {
-			'tarefas.tituloPagina': 'Minhas Tarefas',
+			'tarefas.tituloPagina': 'As Minhas Tarefas',
 			'tarefas.filtro.todosProjetos': 'Todos os projetos',
 			'tarefas.filtro.semProjeto': 'Tarefas sem projeto',
 			'tarefas.botao.adicionar': 'Adicionar Tarefa',
@@ -160,7 +160,6 @@
 	});
 	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
-	// let novoTexto = ''; // Removido pois não era usado
 	let projetoSelecionado: number | 'sem-projeto' = 'sem-projeto';
 	let filtroProjetoId: number | 'todos' | 'sem-projeto' = 'todos';
 	let dataFinal = '';
@@ -168,8 +167,8 @@
 	let dataPrevisao = '';
 	let tarefaEditando: Partial<Tarefa> | null = null;
 	let tarefaParaExcluir: Tarefa | null = null;
-	let draggedTaskId: number | null = null; // Se Tarefa.id for string, mude o tipo aqui
-	let tarefasFiltradas: Tarefa[] = []; // $tarefasStore já é reativo, esta pode ser derivada
+	let draggedTaskId: number | null = null;
+	let tarefasFiltradas: Tarefa[] = [];
 	let erroValidacao = '';
 
 	// Estes são os valores para os status. Os labels virão das traduções.
@@ -208,11 +207,10 @@
 
 	function validarDatas(): boolean {
 		erroValidacao = '';
-		let projetoEncontrado: Projeto | undefined = undefined;
-
-		if (projetoSelecionado !== 'sem-projeto' && typeof projetoSelecionado === 'number') {
-			projetoEncontrado = $projetos.find((p) => p.id === projetoSelecionado);
-		}
+		let projetoEncontrado =
+			projetoSelecionado !== 'sem-projeto' && typeof projetoSelecionado === 'number'
+				? $projetos.find((p) => p.id === projetoSelecionado)
+				: undefined;
 
 		if (dataPrevisao && dataFinal && new Date(dataPrevisao) > new Date(dataFinal)) {
 			erroValidacao = $t('tarefas.modal.validacao.previsaoAposFinal');
@@ -221,7 +219,7 @@
 
 		if (projetoEncontrado && projetoEncontrado.dataPrazo) {
 			const dataPrazoProjeto = new Date(projetoEncontrado.dataPrazo);
-			const prazoFormatado = formatarData(projetoEncontrado.dataPrazo); // Usa a função traduzida
+			const prazoFormatado = formatarData(projetoEncontrado.dataPrazo);
 
 			if (dataPrevisao && new Date(dataPrevisao) > dataPrazoProjeto) {
 				erroValidacao = $t('tarefas.modal.validacao.previsaoAposPrazoProjeto', {
@@ -250,20 +248,19 @@
 	}
 
 	const handleDragStart = (event: DragEvent, taskId: number) => {
-		// Se Tarefa.id for string, mude o tipo aqui
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 		draggedTaskId = taskId;
 		(event.target as HTMLElement).classList.add('dragging');
 	};
 
 	const handleDragOver = (event: DragEvent) => {
-		// Removido newStatus, não é usado aqui
 		event.preventDefault();
 	};
 
 	const handleDrop = (event: DragEvent, newStatus: StatusTarefa) => {
 		event.preventDefault();
 		if (draggedTaskId !== null) {
+			// ESTA LINHA AGORA FUNCIONA PORQUE A FUNÇÃO EXISTE NA STORE!
 			tarefasStore.atualizarStatusTarefa(draggedTaskId, newStatus);
 		}
 	};
@@ -304,14 +301,12 @@
 		}
 	};
 
-	// formatarData ajustada para usar $configuracoes.idioma
 	function formatarData(dataString?: string): string {
 		if (!dataString) return $t('tarefas.card.dataNaoDisponivel');
 		try {
 			let langTag = $configuracoes.idioma || 'pt';
 			if (langTag === 'pt') langTag = 'pt-PT';
-			else if (langTag === 'en')
-				langTag = 'en-GB'; // Consistente com outras páginas
+			else if (langTag === 'en') langTag = 'en-GB';
 			else if (langTag === 'es') langTag = 'es-ES';
 			else if (langTag === 'fr') langTag = 'fr-FR';
 
@@ -347,31 +342,24 @@
 			dataInicio: dataInicio || undefined,
 			dataPrevisao: dataPrevisao || undefined,
 			dataFinal: dataFinal || undefined,
-			status: tarefaEditando.status || 'Pendente' // Garantir que status é definido
+			status: tarefaEditando.status || 'Pendente'
 		};
 
 		if (tarefaEditando.id) {
 			tarefasStore.atualizarTarefa(tarefaEditando.id, dadosTarefa);
 		} else {
-			// Para nova tarefa, garantir que todos os campos obrigatórios da store 'addTarefa' estão presentes
-			// e que o status default é 'Pendente' se não for definido no formulário.
 			tarefasStore.adicionarTarefa({
-				descricao: dadosTarefa.descricao!, // Já validado que não é vazio
+				descricao: dadosTarefa.descricao!,
 				prioridade: dadosTarefa.prioridade!,
-				status: dadosTarefa.status!, // Default para 'Pendente' se não alterado
+				status: dadosTarefa.status!,
 				projetoId: dadosTarefa.projetoId,
 				dataInicio: dadosTarefa.dataInicio,
 				dataPrevisao: dadosTarefa.dataPrevisao,
 				dataFinal: dadosTarefa.dataFinal
-			} as Omit<Tarefa, 'id'>);
+			} as Omit<Tarefa, 'id' | 'dataCriacao'>);
 		}
 		fecharModal();
 	}
-
-	// $: if ($configuracoes) { // Para depuração
-	// 	console.log('[TAREFAS] Idioma da store configuracoes:', $configuracoes.idioma);
-	// 	console.log('[TAREFAS] Titulo Traduzido ($t):', $t('tarefas.tituloPagina'));
-	// }
 </script>
 
 <div class="tarefas-page-container">
@@ -429,7 +417,7 @@
 		{#each statusOptionsDisplay as statusOpt (statusOpt.value)}
 			<div
 				class="status-column"
-				on:dragover={(e) => handleDragOver(e)}
+				on:dragover={handleDragOver}
 				on:drop|preventDefault={(e) => handleDrop(e, statusOpt.value)}
 				data-status={statusOpt.value}
 			>
@@ -452,7 +440,6 @@
 						>
 							<div class="tarefa-card-header">
 								<div class="tarefa-identifier">
-									<span class="priority-indicator"></span>
 									<strong class="tarefa-description">{tarefa.descricao}</strong>
 								</div>
 								<div class="tarefa-action-buttons">
@@ -645,7 +632,7 @@
 </div>
 
 <style>
-	/* Cole aqui os seus estilos CSS originais para a página de tarefas */
+	/* Seus estilos CSS originais podem ser colados aqui sem alterações */
 	.tarefas-page-container {
 		max-width: 1300px;
 		margin: 0 auto;
@@ -848,9 +835,6 @@
 		flex-grow: 1;
 		min-width: 0;
 	}
-	.priority-indicator {
-		display: none;
-	} /* Usando border-left no card */
 	.tarefa-description {
 		font-weight: 600;
 		color: var(--app-text-color);
@@ -1026,21 +1010,21 @@
 	}
 	.input-field {
 		padding: 0.7rem 0.9rem;
-		border: 1px solid var(--border-color); /* Ajustei para --border-color para inputs não focados */
+		border: 1px solid var(--border-color);
 		border-radius: var(--radius);
 		font-size: 0.95rem;
 		transition:
 			border-color 0.2s ease,
 			box-shadow 0.2s ease;
 		font-family: inherit;
-		background-color: var(--input-background-color); /* Usando input-background-color */
+		background-color: var(--input-background-color);
 		color: var(--app-text-color);
 		width: 100%;
 	}
 	.input-field:focus {
 		border-color: var(--primary-color);
 		outline: none;
-		box-shadow: 0 0 0 3px var(--input-focus-ring-color); /* Usando input-focus-ring-color */
+		box-shadow: 0 0 0 3px var(--input-focus-ring-color);
 	}
 	.field-hint {
 		font-size: 0.75rem;
@@ -1110,10 +1094,6 @@
 		margin-bottom: 0.5rem;
 		justify-content: center;
 	}
-	.confirmation-modal .confirmation-icon {
-		color: var(--danger-color);
-		margin-right: 0.5rem;
-	}
 	.confirmation-message {
 		text-align: center;
 		font-size: 1.05rem;
@@ -1123,14 +1103,11 @@
 	.irreversible-warning {
 		text-align: center;
 		font-size: 0.9rem;
-		color: var(--text-color-muted); /* Ajuste conforme seu tema, pode ser danger-text-color */
-		background-color: var(
-			--border-color
-		); /* Ajuste conforme seu tema, pode ser danger-background-color */
-		padding: 0.5rem; /* Era 0.75rem */
+		color: var(--text-color-muted);
+		background-color: var(--border-color);
+		padding: 0.5rem;
 		border-radius: var(--radius);
 		margin: 1rem 0;
-		/* border-left: 3px solid var(--danger-color); Removido para um aviso mais suave */
 	}
 	@media (max-width: 768px) {
 		.page-header {
