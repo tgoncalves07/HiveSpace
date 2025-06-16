@@ -24,7 +24,7 @@ function createProjetosStore() {
 		}
 	}
 
-	// Função para salvar no localStorage
+	// Função para salvar no localStoragea
 	const saveToLocalStorage = (projetos: Projeto[]) => {
 		if (browser) {
 			localStorage.setItem('projetos', JSON.stringify(projetos));
