@@ -32,8 +32,7 @@
 		CheckCircle,
 		Monitor,
 		HelpCircle,
-		Send,
-		Loader2 // --> MUDANÇA: Ícone de carregamento
+		Send
 	} from 'lucide-svelte';
 
 	// --- DICIONÁRIO DE TRADUÇÕES ---
@@ -83,17 +82,12 @@
 			'modal.eliminar.avisoBackup':
 				'RECOMENDAÇÃO: Exporte os seus dados antes de continuar, caso deseje ter um backup.',
 			'modal.eliminar.confirmar': 'Sim, Eliminar Tudo',
-			// --> MUDANÇA: Textos para o novo formulário de suporte
 			'config.suporte.titulo': 'Suporte e Feedback',
 			'config.suporte.info':
-				'Tem alguma dúvida, sugestão ou encontrou um problema? Envie-nos uma mensagem através do formulário abaixo.',
+				'Tem alguma dúvida, sugestão ou encontrou um problema? Envie-nos uma mensagem. Esta ação abrirá o seu cliente de email padrão.',
 			'config.suporte.email': 'O seu Email (para podermos responder)',
 			'config.suporte.mensagem': 'A sua Mensagem',
-			'config.suporte.enviar': 'Enviar Mensagem',
-			'config.suporte.enviando': 'A Enviar...',
-			'config.suporte.enviadoSucesso':
-				'Mensagem enviada com sucesso! Entraremos em contacto em breve.',
-			'config.suporte.erroEnvio': 'Falha ao enviar a mensagem. Por favor, tente mais tarde.'
+			'config.suporte.enviar': 'Enviar Mensagem'
 		},
 		en: {
 			'config.titulo': 'Settings',
@@ -140,16 +134,12 @@
 			'modal.eliminar.avisoBackup':
 				'RECOMMENDATION: Export your data before proceeding if you wish to have a backup.',
 			'modal.eliminar.confirmar': 'Yes, Delete Everything',
-			// --> MUDANÇA: Textos para o novo formulário de suporte (EN)
 			'config.suporte.titulo': 'Support & Feedback',
 			'config.suporte.info':
-				'Have a question, suggestion, or found an issue? Send us a message using the form below.',
+				'Have a question, suggestion, or found an issue? Send us a message. This action will open your default email client.',
 			'config.suporte.email': 'Your Email (so we can reply)',
 			'config.suporte.mensagem': 'Your Message',
-			'config.suporte.enviar': 'Send Message',
-			'config.suporte.enviando': 'Sending...',
-			'config.suporte.enviadoSucesso': 'Message sent successfully! We will get back to you soon.',
-			'config.suporte.erroEnvio': 'Failed to send message. Please try again later.'
+			'config.suporte.enviar': 'Send Message'
 		}
 	};
 
@@ -173,11 +163,8 @@
 	let mensagemErro = '';
 	let alteracoesPendentes = false;
 	let configuracoesIniciaisString = '';
-
-	// --> MUDANÇA: Variáveis de estado para o formulário de suporte
 	let suporteEmail = '';
 	let suporteMensagem = '';
-	let enviandoSuporte = false;
 
 	const idiomasDisponiveis = [
 		{ valor: 'pt' as Idioma, nome: 'Português' },
@@ -286,7 +273,8 @@
 				}
 				if (dadosImportados.notas) {
 					try {
-						notesStore.reset();
+						// Para stores customizadas, use os métodos que você criou
+						notesStore.reset(); // Limpa a store antes de adicionar
 						dadosImportados.notas.forEach((note) => {
 							notesStore.addNote(note.title, note.description, note.content);
 						});
@@ -328,58 +316,34 @@
 	function eliminarTodosDados() {
 		showDeleteModal = false;
 
+		// Limpar todos os dados do localStorage
 		localStorage.removeItem('projetos');
 		localStorage.removeItem('tarefas');
 		localStorage.removeItem('reminders');
 		localStorage.removeItem('svelte-notes-app-data');
 
+		// Resetar as stores ativas para refletir a limpeza
 		projetos.set([]);
 		tarefas.set([]);
-		notesStore.reset();
+		notesStore.reset(); // <-- AQUI ESTÁ A CORREÇÃO: Use o método reset() em vez de set()
 		reminders.set({});
 
+		// Resetar as configurações da aplicação
 		configuracoes.reset();
 
+		// Mostra a mensagem de sucesso e atualiza o estado
 		mostrarMensagem($t('config.mensagens.dadosEliminados'), 'sucesso');
 		configuracoesIniciaisString = JSON.stringify($configuracoes);
 		alteracoesPendentes = false;
 	}
 
-	// --> MUDANÇA: Nova função para enviar a mensagem de suporte
-	async function enviarMensagemSuporte() {
-		enviandoSuporte = true;
-		mostrarMensagem('', 'sucesso'); // Limpa mensagens anteriores
-		mostrarMensagem('', 'erro');
-
-		// !!! IMPORTANTE: Substitua pelo seu endpoint do Formspree !!!
-		const FORM_ENDPOINT = 'https://formspree.io/f/YOUR_UNIQUE_ID';
-
-		try {
-			const response = await fetch(FORM_ENDPOINT, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Accept: 'application/json'
-				},
-				body: JSON.stringify({
-					email: suporteEmail,
-					message: suporteMensagem
-				})
-			});
-
-			if (response.ok) {
-				mostrarMensagem($t('config.suporte.enviadoSucesso'), 'sucesso');
-				suporteEmail = '';
-				suporteMensagem = '';
-			} else {
-				throw new Error('Formspree submission failed');
-			}
-		} catch (error) {
-			console.error('Erro ao enviar mensagem de suporte:', error);
-			mostrarMensagem($t('config.suporte.erroEnvio'), 'erro');
-		} finally {
-			enviandoSuporte = false;
-		}
+	function enviarMensagemSuporte() {
+		const destinatario = 'hivespace.suport@gmail.com';
+		const assunto = encodeURIComponent('Mensagem de Suporte da Aplicação');
+		const corpo = encodeURIComponent(
+			`O meu email de contacto: ${suporteEmail}\n\n---------------------------------\n\nMensagem:\n${suporteMensagem}`
+		);
+		window.location.href = `mailto:${destinatario}?subject=${assunto}&body=${corpo}`;
 	}
 
 	function mostrarMensagem(mensagem: string, tipo: 'sucesso' | 'erro') {
@@ -406,7 +370,7 @@
 	}
 </script>
 
-<!-- O HTML e CSS permanecem os mesmos, exceto pela secção de suporte -->
+<!-- O HTML e CSS permanecem os mesmos -->
 <div class="configuracoes-container">
 	<header>
 		<h1><Settings size={28} /> {$t('config.titulo')}</h1>
@@ -508,62 +472,41 @@
 			</div>
 		</section>
 
-		<!-- -->
-		<!-- -->
-		<!-- -->
-		<!-- -->
-		<!-- MUDANÇA: SECÇÃO SUPORTE E FEEDBACK MODIFICADA -->
-		<!-- -->
-		<!-- -->
-		<!-- -->
-		<!-- -->
+		<!-- SECÇÃO SUPORTE E FEEDBACK -->
 		<section class="config-secao">
 			<h2><HelpCircle size={20} /> {$t('config.suporte.titulo')}</h2>
 			<p class="info-text">{$t('config.suporte.info')}</p>
 
-			<form on:submit|preventDefault={enviarMensagemSuporte} class="suporte-form">
-				<div class="config-item">
-					<label for="suporte-email">{$t('config.suporte.email')}</label>
-					<input
-						id="suporte-email"
-						type="email"
-						name="email"
-						class="input"
-						bind:value={suporteEmail}
-						placeholder="seu.email@exemplo.com"
-						required
-						disabled={enviandoSuporte}
-					/>
-				</div>
+			<div class="config-item">
+				<label for="suporte-email">{$t('config.suporte.email')}</label>
+				<input
+					id="suporte-email"
+					type="email"
+					class="input"
+					bind:value={suporteEmail}
+					placeholder="seu.email@exemplo.com"
+				/>
+			</div>
 
-				<div class="config-item">
-					<label for="suporte-mensagem">{$t('config.suporte.mensagem')}</label>
-					<textarea
-						id="suporte-mensagem"
-						name="message"
-						class="input"
-						rows="5"
-						bind:value={suporteMensagem}
-						placeholder={$t('config.suporte.mensagem')}
-						required
-						disabled={enviandoSuporte}
-					/>
-				</div>
+			<div class="config-item">
+				<label for="suporte-mensagem">{$t('config.suporte.mensagem')}</label>
+				<textarea
+					id="suporte-mensagem"
+					class="input"
+					rows="5"
+					bind:value={suporteMensagem}
+					placeholder={$t('config.suporte.mensagem')}
+				/>
+			</div>
 
-				<button
-					type="submit"
-					class="btn btn-primary btn-full-width"
-					disabled={!suporteEmail.includes('@') || suporteMensagem.trim() === '' || enviandoSuporte}
-				>
-					{#if enviandoSuporte}
-						<Loader2 size={16} class="icon-spin" />
-						{$t('config.suporte.enviando')}
-					{:else}
-						<Send size={16} />
-						{$t('config.suporte.enviar')}
-					{/if}
-				</button>
-			</form>
+			<button
+				class="btn btn-primary btn-full-width"
+				on:click={enviarMensagemSuporte}
+				disabled={!suporteEmail.includes('@') || suporteMensagem.trim() === ''}
+			>
+				<Send size={16} />
+				{$t('config.suporte.enviar')}
+			</button>
 		</section>
 
 		<!-- SECÇÃO PERIGO / REPOSIÇÃO -->
@@ -581,7 +524,7 @@
 		</section>
 	</div>
 
-	<!-- MODAIS (permanecem iguais) -->
+	<!-- MODAIS -->
 	{#if showResetModal}
 		<div
 			class="modal-overlay"
@@ -676,26 +619,6 @@
 </div>
 
 <style>
-	/* --> MUDANÇA: Adiciona CSS para o formulário de suporte e animação de spin */
-	.suporte-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-
-	@keyframes spin {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(360deg);
-		}
-	}
-	.icon-spin {
-		animation: spin 1s linear infinite;
-	}
-	/* Fim da adição */
-
 	.info-text {
 		font-size: 0.9rem;
 		color: var(--app-text-color);
@@ -1044,9 +967,7 @@
 			width: 100%;
 		}
 		.config-secao .config-item .btn-full-width,
-		.config-secao .config-item label.btn-full-width,
-		.suporte-form .btn-full-width {
-			/* --> MUDANÇA: Garante que o botão de suporte também é full-width */
+		.config-secao .config-item label.btn-full-width {
 			width: 100%;
 		}
 		.config-acoes-perigo {
