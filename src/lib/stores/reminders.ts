@@ -1,62 +1,64 @@
-// stores/reminders.js
-import { writable } from 'svelte/store';
+// src/lib/stores/reminders.ts
 
+import { writable, type Writable } from 'svelte/store';
+
+// --- DEFINIÇÃO DOS TIPOS ---
+
+// Define a estrutura de um único lembrete
+export interface ReminderItem {
+	id: string;
+	text: string;
+	time: string;
+	completed: boolean;
+}
+
+// Define a estrutura completa dos dados guardados: um objeto
+// onde cada chave é uma data ('YYYY-MM-DD') e o valor é um array de lembretes.
+type RemindersData = Record<string, ReminderItem[]>;
+
+// Chave para usar no localStorage
 const REMINDERS_STORAGE_KEY = 'reminders';
 
-// Função para carregar os lembretes do localStorage
-function loadRemindersFromLocalStorage() {
+// --- FUNÇÃO PARA CARREGAR DADOS ---
+
+function loadRemindersFromLocalStorage(): RemindersData {
+	// Garante que o código só é executado no browser
 	if (typeof window !== 'undefined' && window.localStorage) {
-		const saved = localStorage.getItem(REMINDERS_STORAGE_KEY);
-		if (saved) {
+		const savedData = localStorage.getItem(REMINDERS_STORAGE_KEY);
+		if (savedData) {
 			try {
-				// Validação simples para garantir que é um objeto
-				const parsed = JSON.parse(saved);
-				if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-					return parsed;
+				// Tenta converter o JSON guardado de volta para um objeto
+				const parsedData = JSON.parse(savedData);
+				// Validação simples para garantir que o que foi carregado é um objeto
+				if (typeof parsedData === 'object' && parsedData !== null) {
+					return parsedData;
 				}
 			} catch (e) {
-				console.error('Erro ao parsear lembretes do localStorage:', e);
+				console.error('Erro ao ler os lembretes do localStorage:', e);
+				// Em caso de erro, remove o item inválido para evitar erros futuros
+				localStorage.removeItem(REMINDERS_STORAGE_KEY);
 			}
 		}
 	}
-	return {}; // Retorna objeto vazio como fallback
+	// Retorna um objeto vazio se não houver dados ou se ocorrer um erro
+	return {};
 }
 
-// Função para salvar no localStorage
-function saveRemindersToLocalStorage(remindersData) {
-	if (typeof window !== 'undefined' && window.localStorage) {
-		localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(remindersData));
+// --- CRIAÇÃO E EXPORTAÇÃO DA STORE ---
+
+// Cria a store reativa (writable), inicializando-a com os dados do localStorage
+const store: Writable<RemindersData> = writable(loadRemindersFromLocalStorage());
+
+// Usa a função 'subscribe' da própria store para observar mudanças.
+// Sempre que o valor da store for alterado (via 'set' ou 'update'),
+// esta função será chamada, guardando o novo estado no localStorage.
+store.subscribe((currentValue) => {
+	if (typeof window !== 'undefined') {
+		localStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(currentValue));
 	}
-}
+});
 
-// Cria a store interna
-const { subscribe, set, update } = writable(loadRemindersFromLocalStorage());
-
-// Funções para manipular os lembretes
-function addOrUpdateReminder(date, reminderText) {
-	update((allReminders) => {
-		const updatedReminders = { ...allReminders, [date]: reminderText };
-		saveRemindersToLocalStorage(updatedReminders);
-		return updatedReminders;
-	});
-}
-
-function deleteReminder(date) {
-	update((allReminders) => {
-		const { [date]: _, ...remainingReminders } = allReminders;
-		saveRemindersToLocalStorage(remainingReminders);
-		return remainingReminders;
-	});
-}
-
-// Exporta o objeto da store com os métodos
-export const reminders = {
-	subscribe,
-	set: (value) => {
-		// Mantém a compatibilidade com o set original, se necessário
-		saveRemindersToLocalStorage(value);
-		set(value);
-	},
-	addOrUpdateReminder,
-	deleteReminder
-};
+// Exporta o objeto da store com os métodos padrão (subscribe, set, update).
+// O seu componente `Calendar.svelte` usa `reminders.update()`, que agora
+// estará disponível e funcional.
+export const reminders = store;
