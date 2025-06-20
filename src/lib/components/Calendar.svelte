@@ -1,3 +1,4 @@
+<!-- src/routes/calendario/+page.svelte -->
 <script lang="ts">
 	import { derived } from 'svelte/store';
 	import { Calendar as CalendarIcon, Trash2 as TrashIcon, X as XIcon } from 'lucide-svelte';
@@ -288,6 +289,7 @@
 	}
 </script>
 
+<!-- Resto do HTML e CSS, que já estava correto -->
 <!-- container principal do componente -->
 <div class="calendar-component-container">
 	<header class="page-header-style">
@@ -488,7 +490,6 @@
 		font-size: 1.2rem;
 	}
 
-	/* --- INÍCIO DA CORREÇÃO --- */
 	/* estilos para a grelha do calendário */
 	.calendar-grid-layout {
 		display: grid;
@@ -521,7 +522,6 @@
 		border-right: 1px solid var(--border-color);
 		border-bottom: 1px solid var(--border-color);
 	}
-	/* --- FIM DA CORREÇÃO --- */
 
 	.day-cell-style:hover,
 	.day-cell-style:focus-visible {
@@ -542,7 +542,6 @@
 	.day-cell-style.is-today {
 		background-color: color-mix(in srgb, var(--primary-color) 15%, var(--card-background-color));
 		font-weight: 600;
-		/* A borda explícita já é desenhada, mas podemos manter esta para dar mais destaque */
 		border-right: 1px solid var(--primary-color);
 		border-bottom: 1px solid var(--primary-color);
 	}

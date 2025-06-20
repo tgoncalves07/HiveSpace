@@ -1,736 +1,813 @@
-<!-- src/routes/calendario/+page.svelte -->
+<!--src/routes/config/+page.svelte-->
 <script lang="ts">
-	import { derived } from 'svelte/store';
-	import { Calendar as CalendarIcon, Trash2 as TrashIcon, X as XIcon } from 'lucide-svelte';
-	import { reminders, type ReminderItem } from '../../lib/stores/reminders';
-	import { configuracoes, type Idioma as AppIdioma } from '../../lib/stores/pageStore';
+	import { fade, slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
+	import { derived, get } from 'svelte/store';
 
-	// --- DICIONÁRIO DE TRADUÇÕES PARA O CALENDÁRIO ---
-	// objeto que guarda todas as traduções do componente
-	const calendarTranslations = {
+	import {
+		configuracoes,
+		type Tema,
+		type Idioma,
+		type ConfiguracoesState,
+		getAppDefaults
+	} from '../../lib/stores/pageStore';
+	import { projetos } from '../../lib/stores/projetos';
+	import { tarefas } from '../../lib/stores/tarefas';
+	import { notesStore } from '../../lib/stores/notesStores';
+	import { reminders } from '../../lib/stores/reminders';
+
+	// Ícones
+	import {
+		Settings,
+		Globe,
+		Moon,
+		Sun,
+		Save,
+		RotateCcw,
+		Database,
+		Download,
+		Upload,
+		Trash2,
+		AlertTriangle,
+		CheckCircle,
+		Monitor,
+		HelpCircle,
+		Send
+	} from 'lucide-svelte';
+
+	// --- DICIONÁRIO DE TRADUÇÕES ---
+	const translations = {
 		pt: {
-			'calendar.titulo': ' O Meu Calendário',
-			'calendar.meses.janeiro': 'Janeiro',
-			'calendar.meses.fevereiro': 'Fevereiro',
-			'calendar.meses.marco': 'Março',
-			'calendar.meses.abril': 'Abril',
-			'calendar.meses.maio': 'Maio',
-			'calendar.meses.junho': 'Junho',
-			'calendar.meses.julho': 'Julho',
-			'calendar.meses.agosto': 'Agosto',
-			'calendar.meses.setembro': 'Setembro',
-			'calendar.meses.outubro': 'Outubro',
-			'calendar.meses.novembro': 'Novembro',
-			'calendar.meses.dezembro': 'Dezembro',
-			'calendar.dias.dom': 'Dom',
-			'calendar.dias.seg': 'Seg',
-			'calendar.dias.ter': 'Ter',
-			'calendar.dias.qua': 'Qua',
-			'calendar.dias.qui': 'Qui',
-			'calendar.dias.sex': 'Sex',
-			'calendar.dias.sab': 'Sáb',
-			'calendar.lembretesDe': 'Lembretes de {mes}',
-			'calendar.nenhumLembrete': 'Nenhum lembrete para este mês.',
-			'calendar.modal.novoLembrete': 'Novo Lembrete',
-			'calendar.modal.dataSelecionada': 'Data Selecionada',
-			'calendar.modal.horario': 'Horário',
-			'calendar.modal.descricao': 'Descrição do Lembrete',
-			'calendar.modal.placeholderDescricao': 'Ex: Reunião com equipe',
-			'calendar.modal.salvar': 'Salvar Lembrete',
-			'calendar.modal.cancelar': 'Cancelar',
-			'calendar.modal.fechar': 'Fechar modal',
-			'calendar.modal.excluirLembreteAria': 'Excluir lembrete',
-			'calendar.selecionarDataAria': 'Selecionar data {data}',
-			'calendar.mesAnterior': 'Mês Anterior',
-			'calendar.proximoMes': 'Próximo Mês'
+			'config.titulo': 'Configurações',
+			'config.salvar': 'Guardar Alterações',
+			'config.aparencia.titulo': 'Aparência',
+			'config.aparencia.tema': 'Tema',
+			'config.aparencia.idioma': 'Idioma',
+			'config.dados.titulo': 'Gestão de Dados da Aplicação',
+			'config.dados.exportar': 'Exportar Todos os Dados',
+			'config.dados.importar': 'Importar Dados',
+			'config.dados.exportarInfo':
+				'Crie um ficheiro de backup com as suas configurações, projetos, tarefas, notas e lembretes. Guarde este ficheiro num local seguro.',
+			'config.dados.importarInfo':
+				'Restaure as suas configurações e dados de projetos, tarefas, notas e lembretes a partir de um ficheiro de backup previamente exportado.',
+			'config.perigo.titulo': 'Opções de Restauro',
+			'config.perigo.repor': 'Repor Configurações Padrão',
+			'config.perigo.eliminar': 'Eliminar Todos os Dados da Aplicação',
+			'config.temas.claro': 'Claro',
+			'config.temas.escuro': 'Escuro',
+			'config.temas.sistema': 'Sistema',
+			'config.mensagens.guardadoSucesso': 'Configurações guardadas com sucesso!',
+			'config.mensagens.repostoSucesso': 'Configurações repostas para os valores padrão.',
+			'config.mensagens.exportadoSucesso':
+				'Dados exportados com sucesso! Guarde o ficheiro num local seguro.',
+			'config.mensagens.importadoSucesso': 'Dados importados com sucesso!',
+			'config.mensagens.erroExportar': 'Erro ao exportar dados. Verifique o console.',
+			'config.mensagens.erroImportar': 'Erro ao importar dados. Ficheiro inválido ou corrompido.',
+			'config.mensagens.erroLerFicheiro': 'Erro ao ler o ficheiro.',
+			'config.mensagens.dadosEliminados':
+				'Todos os dados da aplicação foram eliminados e as configurações repostas.',
+			'modal.repor.titulo': 'Repor Configurações',
+			'modal.repor.descricao':
+				'Tem a certeza de que deseja repor todas as configurações para os valores padrão? Esta ação não afetará os seus projetos e tarefas guardados.',
+			'modal.repor.cancelar': 'Cancelar',
+			'modal.repor.confirmar': 'Confirmar Reposição',
+			'modal.exportar.titulo': 'Exportar Todos os Dados',
+			'modal.exportar.descricao':
+				'Será criado um ficheiro JSON contendo todas as suas configurações atuais e os dados de todos os seus projetos, tarefas, notas e lembretes. Guarde este ficheiro num local seguro para poder restaurá-lo mais tarde, se necessário.',
+			'modal.exportar.exportar': 'Exportar',
+			'modal.eliminar.titulo': 'Eliminar Todos os Dados da Aplicação',
+			'modal.eliminar.atencao': 'ATENÇÃO: Esta ação é irreversível!',
+			'modal.eliminar.descricao':
+				'Todos os seus projetos, tarefas, notas e lembretes (guardados localmente no navegador) serão permanentemente eliminados. As configurações da aplicação serão repostas para os valores padrão.',
+			'modal.eliminar.avisoBackup':
+				'RECOMENDAÇÃO: Exporte os seus dados antes de continuar, caso deseje ter um backup.',
+			'modal.eliminar.confirmar': 'Sim, Eliminar Tudo',
+			'config.suporte.titulo': 'Suporte e Feedback',
+			'config.suporte.info':
+				'Tem alguma dúvida, sugestão ou encontrou um problema? Envie-nos uma mensagem. Esta ação abrirá o seu cliente de email padrão.',
+			'config.suporte.email': 'O seu Email (para podermos responder)',
+			'config.suporte.mensagem': 'A sua Mensagem',
+			'config.suporte.enviar': 'Enviar Mensagem'
 		},
 		en: {
-			'calendar.titulo': 'My Calendar',
-			'calendar.meses.janeiro': 'January',
-			'calendar.meses.fevereiro': 'February',
-			'calendar.meses.marco': 'March',
-			'calendar.meses.abril': 'April',
-			'calendar.meses.maio': 'May',
-			'calendar.meses.junho': 'June',
-			'calendar.meses.julho': 'July',
-			'calendar.meses.agosto': 'August',
-			'calendar.meses.setembro': 'September',
-			'calendar.meses.outubro': 'October',
-			'calendar.meses.novembro': 'November',
-			'calendar.meses.dezembro': 'December',
-			'calendar.dias.dom': 'Sun',
-			'calendar.dias.seg': 'Mon',
-			'calendar.dias.ter': 'Tue',
-			'calendar.dias.qua': 'Wed',
-			'calendar.dias.qui': 'Thu',
-			'calendar.dias.sex': 'Fri',
-			'calendar.dias.sab': 'Sat',
-			'calendar.lembretesDe': 'Reminders for {mes}',
-			'calendar.nenhumLembrete': 'No reminders for this month.',
-			'calendar.modal.novoLembrete': 'New Reminder',
-			'calendar.modal.dataSelecionada': 'Selected Date',
-			'calendar.modal.horario': 'Time',
-			'calendar.modal.descricao': 'Reminder Description',
-			'calendar.modal.placeholderDescricao': 'E.g., Team meeting',
-			'calendar.modal.salvar': 'Save Reminder',
-			'calendar.modal.cancelar': 'Cancel',
-			'calendar.modal.fechar': 'Close modal',
-			'calendar.modal.excluirLembreteAria': 'Delete reminder',
-			'calendar.selecionarDataAria': 'Select date {data}',
-			'calendar.mesAnterior': 'Previous Month',
-			'calendar.proximoMes': 'Next Month'
+			'config.titulo': 'Settings',
+			'config.salvar': 'Save Changes',
+			'config.aparencia.titulo': 'Appearance',
+			'config.aparencia.tema': 'Theme',
+			'config.aparencia.idioma': 'Language',
+			'config.dados.titulo': 'Application Data Management',
+			'config.dados.exportar': 'Export All Data',
+			'config.dados.importar': 'Import Data',
+			'config.dados.exportarInfo':
+				'Create a backup file with your settings, projects, tasks, notes, and reminders. Store this file in a safe place.',
+			'config.dados.importarInfo':
+				'Restore your settings and data for projects, tasks, notes, and reminders from a previously exported backup file.',
+			'config.perigo.titulo': 'Reset Options',
+			'config.perigo.repor': 'Reset Settings to Default',
+			'config.perigo.eliminar': 'Delete All Application Data',
+			'config.temas.claro': 'Light',
+			'config.temas.escuro': 'Dark',
+			'config.temas.sistema': 'System',
+			'config.mensagens.guardadoSucesso': 'Settings saved successfully!',
+			'config.mensagens.repostoSucesso': 'Settings reset to default values.',
+			'config.mensagens.exportadoSucesso':
+				'Data exported successfully! Store the file in a safe place.',
+			'config.mensagens.importadoSucesso': 'Data imported successfully!',
+			'config.mensagens.erroExportar': 'Error exporting data. Check console.',
+			'config.mensagens.erroImportar': 'Error importing data. Invalid or corrupted file.',
+			'config.mensagens.erroLerFicheiro': 'Error reading file.',
+			'config.mensagens.dadosEliminados':
+				'All application data has been deleted and settings reset.',
+			'modal.repor.titulo': 'Reset Settings',
+			'modal.repor.descricao':
+				'Are you sure you want to reset all settings to their default values? This action will not affect your saved projects and tasks.',
+			'modal.repor.cancelar': 'Cancel',
+			'modal.repor.confirmar': 'Confirm Reset',
+			'modal.exportar.titulo': 'Export All Data',
+			'modal.exportar.descricao':
+				'A JSON file will be created containing all your current settings and data for all your projects, tasks, notes, and reminders. Save this file in a secure location so you can restore it later if needed.',
+			'modal.exportar.exportar': 'Export',
+			'modal.eliminar.titulo': 'Delete All Application Data',
+			'modal.eliminar.atencao': 'WARNING: This action is irreversible!',
+			'modal.eliminar.descricao':
+				'All your projects, tasks, notes, and reminders (saved locally in the browser) will be permanently deleted. Application settings will be reset to their default values.',
+			'modal.eliminar.avisoBackup':
+				'RECOMMENDATION: Export your data before proceeding if you wish to have a backup.',
+			'modal.eliminar.confirmar': 'Yes, Delete Everything',
+			'config.suporte.titulo': 'Support & Feedback',
+			'config.suporte.info':
+				'Have a question, suggestion, or found an issue? Send us a message. This action will open your default email client.',
+			'config.suporte.email': 'Your Email (so we can reply)',
+			'config.suporte.mensagem': 'Your Message',
+			'config.suporte.enviar': 'Send Message'
 		}
 	};
 
-	// cria a função de tradução 't' que reage a mudanças de idioma
 	const t = derived(configuracoes, ($cfg) => {
-		return (key: string, replacements?: Record<string, string | number | undefined>): string => {
-			const selectedLang = $cfg.idioma;
-			let langDict = calendarTranslations[selectedLang as keyof typeof calendarTranslations];
-
-			if (!langDict) {
-				langDict = calendarTranslations.pt;
-			}
-
-			let text = langDict?.[key] || calendarTranslations.pt?.[key] || key;
-
+		return (key: string, replacements?: Record<string, string | number>): string => {
+			const lang = $cfg.idioma as keyof typeof translations;
+			let text = translations[lang]?.[key] || translations.pt?.[key] || key;
 			if (replacements) {
 				for (const k in replacements) {
-					const replacementValue = replacements[k];
-					if (replacementValue !== undefined) {
-						text = text.replace(new RegExp(`{${k}}`, 'g'), String(replacementValue));
-					}
+					text = text.replace(new RegExp(`{${k}}`, 'g'), String(replacements[k]));
 				}
 			}
 			return text;
 		};
 	});
 
-	// data reativa que controla o mês/ano exibido
-	let currentDate = new Date();
-	// data selecionada pelo usuário para adicionar um lembrete
-	let selectedDate: Date | null = null;
-	// controla a visibilidade do modal de lembretes
-	let showReminderModal = false;
-	// inputs do novo lembrete
-	let reminderText = '';
-	let reminderTime = '09:00';
+	let showResetModal = false;
+	let showExportModal = false;
+	let showDeleteModal = false;
+	let mensagemSucesso = '';
+	let mensagemErro = '';
+	let alteracoesPendentes = false;
+	let configuracoesIniciaisString = '';
+	let suporteEmail = '';
+	let suporteMensagem = '';
 
-	// nomes de meses e dias que mudam com o idioma
-	$: monthNamesTranslated = [
-		$t('calendar.meses.janeiro'),
-		$t('calendar.meses.fevereiro'),
-		$t('calendar.meses.marco'),
-		$t('calendar.meses.abril'),
-		$t('calendar.meses.maio'),
-		$t('calendar.meses.junho'),
-		$t('calendar.meses.julho'),
-		$t('calendar.meses.agosto'),
-		$t('calendar.meses.setembro'),
-		$t('calendar.meses.outubro'),
-		$t('calendar.meses.novembro'),
-		$t('calendar.meses.dezembro')
-	];
-	$: dayNamesTranslated = [
-		$t('calendar.dias.dom'),
-		$t('calendar.dias.seg'),
-		$t('calendar.dias.ter'),
-		$t('calendar.dias.qua'),
-		$t('calendar.dias.qui'),
-		$t('calendar.dias.sex'),
-		$t('calendar.dias.sab')
+	const idiomasDisponiveis = [
+		{ valor: 'pt' as Idioma, nome: 'Português' },
+		{ valor: 'en' as Idioma, nome: 'English' }
 	];
 
-	// função para ir para o mês anterior
-	function previousMonth() {
-		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+	$: temasDisponiveisAtualizados = [
+		{ valor: 'claro' as Tema, nome: $t('config.temas.claro'), icone: Sun },
+		{ valor: 'escuro' as Tema, nome: $t('config.temas.escuro'), icone: Moon },
+		{ valor: 'sistema' as Tema, nome: $t('config.temas.sistema'), icone: Monitor }
+	];
+
+	onMount(() => {
+		configuracoesIniciaisString = JSON.stringify($configuracoes);
+		alteracoesPendentes = false;
+	});
+
+	function guardarConfiguracoes() {
+		configuracoesIniciaisString = JSON.stringify($configuracoes);
+		alteracoesPendentes = false;
+		mostrarMensagem($t('config.mensagens.guardadoSucesso'), 'sucesso');
 	}
 
-	// função para ir para o próximo mês
-	function nextMonth() {
-		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+	function resetarConfiguracoes() {
+		configuracoes.reset();
+		showResetModal = false;
+		mostrarMensagem($t('config.mensagens.repostoSucesso'), 'sucesso');
+		configuracoesIniciaisString = JSON.stringify($configuracoes);
+		alteracoesPendentes = false;
 	}
 
-	// define como é um objeto de dia no calendário
-	interface CalendarDay {
-		date: Date;
-		isCurrentMonth: boolean;
-		isToday: boolean;
-		hasReminder: boolean;
-	}
+	function exportarDadosEFecharModal() {
+		try {
+			const dadosParaExportar = {
+				configuracoes: $configuracoes,
+				projetos: get(projetos),
+				tarefas: get(tarefas),
+				notas: get(notesStore),
+				reminders: get(reminders),
+				versaoApp: '1.0.0',
+				dataExportacao: new Date().toISOString()
+			};
 
-	// gera os dias para preencher a grelha do calendário
-	function getCalendarDays(): CalendarDay[] {
-		const year = currentDate.getFullYear();
-		const month = currentDate.getMonth();
-		const firstDayOfMonth = new Date(year, month, 1);
-		const startDate = new Date(firstDayOfMonth);
-		startDate.setDate(startDate.getDate() - firstDayOfMonth.getDay());
-		const days: CalendarDay[] = [];
-		const dateIterator = new Date(startDate);
-		for (let i = 0; i < 42; i++) {
-			days.push({
-				date: new Date(dateIterator),
-				isCurrentMonth: dateIterator.getMonth() === month,
-				isToday: isToday(dateIterator),
-				hasReminder: hasReminderOnDate(dateIterator)
+			const blob = new Blob([JSON.stringify(dadosParaExportar, null, 2)], {
+				type: 'application/json'
 			});
-			dateIterator.setDate(dateIterator.getDate() + 1);
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `backup-app-${new Date().toISOString().split('T')[0]}.json`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+			showExportModal = false;
+			mostrarMensagem($t('config.mensagens.exportadoSucesso'), 'sucesso');
+		} catch (error) {
+			console.error('Erro ao exportar dados:', error);
+			mostrarMensagem($t('config.mensagens.erroExportar'), 'erro');
+			showExportModal = false;
 		}
-		return days;
 	}
 
-	// verifica se uma data é hoje
-	function isToday(date: Date): boolean {
-		const today = new Date();
-		return (
-			date.getFullYear() === today.getFullYear() &&
-			date.getMonth() === today.getMonth() &&
-			date.getDate() === today.getDate()
-		);
-	}
+	function importarDados(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const ficheiro = input.files?.[0];
+		if (!ficheiro) return;
 
-	// formata a data para uma chave de texto (ex: 2024-05-21)
-	function formatDateKey(date: Date): string {
-		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-			date.getDate()
-		).padStart(2, '0')}`;
-	}
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			try {
+				const dadosImportados = JSON.parse(e.target?.result as string);
+				let algumaCoisaImportada = false;
 
-	// verifica se existe um lembrete numa data
-	function hasReminderOnDate(date: Date): boolean {
-		const dateKey = formatDateKey(date);
-		return $reminders[dateKey] && $reminders[dateKey].length > 0;
-	}
+				if (dadosImportados.configuracoes && typeof dadosImportados.configuracoes === 'object') {
+					try {
+						const appDefaults = getAppDefaults();
+						const {
+							formatoHora,
+							prioridadePadraoTarefa,
+							lembretePadraoTarefa,
+							...configImportadaLimpa
+						} = dadosImportados.configuracoes as any;
+						const mergedConfig = { ...appDefaults, ...configImportadaLimpa };
+						configuracoes.set(mergedConfig as ConfiguracoesState);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'configuracoes':", err);
+					}
+				}
+				if (dadosImportados.projetos) {
+					try {
+						projetos.set(dadosImportados.projetos);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'projetos':", err);
+					}
+				}
+				if (dadosImportados.tarefas) {
+					try {
+						tarefas.set(dadosImportados.tarefas);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'tarefas':", err);
+					}
+				}
+				if (dadosImportados.notas) {
+					try {
+						// Para stores customizadas, use os métodos que você criou
+						notesStore.reset(); // Limpa a store antes de adicionar
+						dadosImportados.notas.forEach((note) => {
+							notesStore.addNote(note.title, note.description, note.content);
+						});
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'notas':", err);
+					}
+				}
+				if (dadosImportados.reminders) {
+					try {
+						reminders.set(dadosImportados.reminders);
+						algumaCoisaImportada = true;
+					} catch (err) {
+						console.error("Falha ao importar a secção 'reminders':", err);
+					}
+				}
 
-	// formata a data para ser mais legível para o usuário
-	function formatDisplayDate(date: Date | null): string {
-		if (!date) return '';
-		const currentLang: AppIdioma = $configuracoes.idioma || 'pt';
-		const localeForDate = currentLang.split('-')[0];
-		return date.toLocaleDateString(localeForDate, {
-			weekday: 'long',
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric'
-		});
-	}
-
-	// abre o modal para adicionar um novo lembrete
-	function selectDateForReminder(date: Date) {
-		selectedDate = date;
-		showReminderModal = true;
-		reminderText = '';
-		reminderTime = '09:00';
-	}
-
-	// adiciona um novo lembrete ao store global
-	function addReminder() {
-		if (!reminderText.trim() || !selectedDate) return;
-		const dateKey = formatDateKey(selectedDate);
-		reminders.update((currentReminders) => {
-			const updatedReminders = { ...currentReminders };
-			if (!updatedReminders[dateKey]) updatedReminders[dateKey] = [];
-			updatedReminders[dateKey].push({
-				id: Date.now().toString(),
-				text: reminderText.trim(),
-				time: reminderTime,
-				completed: false
-			});
-			return updatedReminders;
-		});
-		closeReminderModal();
-	}
-
-	// remove um lembrete do store global
-	function removeReminder(date: Date, reminderId: string) {
-		const dateKey = formatDateKey(date);
-		reminders.update((currentReminders) => {
-			if (!currentReminders[dateKey]) return currentReminders;
-			const updatedReminders = { ...currentReminders };
-			updatedReminders[dateKey] = updatedReminders[dateKey].filter((r) => r.id !== reminderId);
-			if (updatedReminders[dateKey].length === 0) delete updatedReminders[dateKey];
-			return updatedReminders;
-		});
-	}
-
-	// fecha o modal e limpa os campos
-	function closeReminderModal() {
-		showReminderModal = false;
-		selectedDate = null;
-		reminderText = '';
-		reminderTime = '09:00';
-	}
-
-	// define como os lembretes são agrupados por dia
-	interface MonthlyReminderGroup {
-		date: Date;
-		reminders: ReminderItem[];
-	}
-
-	// busca os lembretes para uma data específica
-	function getRemindersForDate(date: Date): ReminderItem[] {
-		const dateKey = formatDateKey(date);
-		return $reminders[dateKey] || [];
-	}
-
-	// busca e agrupa todos os lembretes do mês para a lista
-	function getMonthlyReminders(): MonthlyReminderGroup[] {
-		const month = currentDate.getMonth();
-		const year = currentDate.getFullYear();
-		const monthly: MonthlyReminderGroup[] = [];
-		for (const [dateKey, remindersList] of Object.entries($reminders)) {
-			const [y, m, d] = dateKey.split('-').map(Number);
-			if (y === year && m - 1 === month) {
-				monthly.push({ date: new Date(y, m - 1, d), reminders: remindersList as ReminderItem[] });
+				if (algumaCoisaImportada) {
+					configuracoesIniciaisString = JSON.stringify($configuracoes);
+					alteracoesPendentes = false;
+					mostrarMensagem($t('config.mensagens.importadoSucesso'), 'sucesso');
+				} else {
+					throw new Error('O ficheiro JSON não continha nenhuma secção de dados válida.');
+				}
+			} catch (erro) {
+				console.error('Erro geral ao importar dados:', erro);
+				mostrarMensagem($t('config.mensagens.erroImportar'), 'erro');
+			} finally {
+				input.value = '';
 			}
+		};
+		reader.onerror = () => {
+			mostrarMensagem($t('config.mensagens.erroLerFicheiro'), 'erro');
+			input.value = '';
+		};
+		reader.readAsText(ficheiro);
+	}
+
+	function eliminarTodosDados() {
+		showDeleteModal = false;
+
+		// Limpar todos os dados do localStorage
+		localStorage.removeItem('projetos');
+		localStorage.removeItem('tarefas');
+		localStorage.removeItem('reminders');
+		localStorage.removeItem('svelte-notes-app-data');
+
+		// Resetar as stores ativas para refletir a limpeza
+		projetos.set([]);
+		tarefas.set([]);
+		notesStore.reset(); // <-- AQUI ESTÁ A CORREÇÃO: Use o método reset() em vez de set()
+		reminders.set({});
+
+		// Resetar as configurações da aplicação
+		configuracoes.reset();
+
+		// Mostra a mensagem de sucesso e atualiza o estado
+		mostrarMensagem($t('config.mensagens.dadosEliminados'), 'sucesso');
+		configuracoesIniciaisString = JSON.stringify($configuracoes);
+		alteracoesPendentes = false;
+	}
+
+	function enviarMensagemSuporte() {
+		const destinatario = 'hivespace.suport@gmail.com';
+		const assunto = encodeURIComponent('Mensagem de Suporte da Aplicação');
+		const corpo = encodeURIComponent(
+			`O meu email de contacto: ${suporteEmail}\n\n---------------------------------\n\nMensagem:\n${suporteMensagem}`
+		);
+		window.location.href = `mailto:${destinatario}?subject=${assunto}&body=${corpo}`;
+	}
+
+	function mostrarMensagem(mensagem: string, tipo: 'sucesso' | 'erro') {
+		if (tipo === 'sucesso') {
+			mensagemErro = '';
+			mensagemSucesso = mensagem;
+			setTimeout(() => (mensagemSucesso = ''), 4000);
+		} else {
+			mensagemSucesso = '';
+			mensagemErro = mensagem;
+			setTimeout(() => (mensagemErro = ''), 5000);
 		}
-		return monthly.sort((a, b) => a.date.getDate() - b.date.getDate());
+	}
+
+	$: {
+		if (
+			configuracoesIniciaisString &&
+			typeof $configuracoes === 'object' &&
+			$configuracoes !== null
+		) {
+			const configAtualString = JSON.stringify($configuracoes);
+			alteracoesPendentes = configAtualString !== configuracoesIniciaisString;
+		}
 	}
 </script>
 
-<!-- Resto do HTML e CSS, que já estava correto -->
-<!-- container principal do componente -->
-<div class="calendar-component-container">
-	<header class="page-header-style">
-		<h1><CalendarIcon size={28} /> {$t('calendar.titulo')}</h1>
+<!-- O HTML e CSS permanecem os mesmos -->
+<div class="configuracoes-container">
+	<header>
+		<h1><Settings size={28} /> {$t('config.titulo')}</h1>
+		<div class="header-controls">
+			<button
+				class="btn btn-primary"
+				on:click={guardarConfiguracoes}
+				disabled={!alteracoesPendentes}
+			>
+				<Save size={18} />
+				{$t('config.salvar')}
+			</button>
+		</div>
 	</header>
 
-	<!-- controlos para navegar entre os meses -->
-	<div class="calendar-controls">
-		<button
-			on:click={previousMonth}
-			class="button secondary-button month-nav-button"
-			aria-label={$t('calendar.mesAnterior')}>‹</button
-		>
-		<h2 class="current-month-year">
-			{monthNamesTranslated[currentDate.getMonth()]}
-			{currentDate.getFullYear()}
-		</h2>
-		<button
-			on:click={nextMonth}
-			class="button secondary-button month-nav-button"
-			aria-label={$t('calendar.proximoMes')}>›</button
-		>
-	</div>
+	{#if mensagemSucesso}
+		<div class="mensagem sucesso" role="alert" transition:fade={{ duration: 300 }}>
+			<CheckCircle size={20} />
+			<p>{mensagemSucesso}</p>
+		</div>
+	{/if}
+	{#if mensagemErro}
+		<div class="mensagem erro" role="alert" transition:fade={{ duration: 300 }}>
+			<AlertTriangle size={20} />
+			<p>{mensagemErro}</p>
+		</div>
+	{/if}
 
-	<!-- grelha do calendário -->
-	<div class="calendar-grid-layout">
-		<!-- cabeçalhos com os nomes dos dias da semana -->
-		{#each dayNamesTranslated as dayName (dayName)}
-			<div class="day-name-header">{dayName}</div>
-		{/each}
-
-		<!-- loop para criar as células de cada dia do mês -->
-		{#each getCalendarDays() as day (day.date.toISOString())}
-			<div
-				class="day-cell-style"
-				class:is-current-month={day.isCurrentMonth}
-				class:is-other-month={!day.isCurrentMonth}
-				class:is-today={day.isToday}
-				class:has-reminder-style={day.hasReminder && day.isCurrentMonth}
-				on:click={() => day.isCurrentMonth && selectDateForReminder(day.date)}
-				on:keydown={(e) =>
-					day.isCurrentMonth && e.key === 'Enter' && selectDateForReminder(day.date)}
-				tabindex={day.isCurrentMonth ? 0 : -1}
-				role="button"
-				aria-label={$t('calendar.selecionarDataAria', { data: day.date.getDate() })}
-			>
-				<span class="day-number-display">{day.date.getDate()}</span>
-				<!-- indicador visual se o dia tem um lembrete -->
-				{#if day.hasReminder && day.isCurrentMonth}
-					<div class="reminder-dot-indicator"></div>
-				{/if}
+	<div class="configuracoes-grid">
+		<!-- SECÇÃO APARÊNCIA -->
+		<section class="config-secao">
+			<h2><Monitor size={20} /> {$t('config.aparencia.titulo')}</h2>
+			<div class="config-item">
+				<label for="tema-label">{$t('config.aparencia.tema')}</label>
+				<div id="tema-label" class="tema-opcoes" role="group" aria-labelledby="tema-label">
+					{#each temasDisponiveisAtualizados as temaOpt (temaOpt.valor)}
+						<button
+							class="btn tema-btn {$configuracoes.tema === temaOpt.valor ? 'ativo' : ''}"
+							on:click={() => configuracoes.update((cfg) => ({ ...cfg, tema: temaOpt.valor }))}
+							aria-pressed={$configuracoes.tema === temaOpt.valor}
+						>
+							<svelte:component this={temaOpt.icone} size={18} />
+							{temaOpt.nome}
+						</button>
+					{/each}
+				</div>
 			</div>
-		{/each}
+			<div class="config-item">
+				<label for="idioma"><Globe size={16} /> {$t('config.aparencia.idioma')}</label>
+				<select
+					id="idioma"
+					bind:value={$configuracoes.idioma}
+					on:change={(e) =>
+						configuracoes.update((cfg) => ({
+							...cfg,
+							idioma: (e.target as HTMLSelectElement).value as Idioma
+						}))}
+					class="input"
+				>
+					{#each idiomasDisponiveis as idiomaOpt}
+						<option value={idiomaOpt.valor}>{idiomaOpt.nome}</option>
+					{/each}
+				</select>
+			</div>
+		</section>
+
+		<!-- SECÇÃO DADOS E BACKUP -->
+		<section class="config-secao">
+			<h2><Database size={20} /> {$t('config.dados.titulo')}</h2>
+			<p class="info-text">{$t('config.dados.exportarInfo')}</p>
+			<div class="config-item">
+				<button class="btn btn-primary btn-full-width" on:click={() => (showExportModal = true)}>
+					<Download size={16} />
+					{$t('config.dados.exportar')}
+				</button>
+			</div>
+
+			<p class="info-text">{$t('config.dados.importarInfo')}</p>
+			<div class="config-item">
+				<label
+					class="btn btn-secondary btn-full-width"
+					for="importar-dados-input"
+					role="button"
+					tabindex="0"
+					on:keydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') (e.currentTarget as HTMLLabelElement).click();
+					}}
+				>
+					<Upload size={16} />
+					{$t('config.dados.importar')}
+					<input
+						id="importar-dados-input"
+						type="file"
+						accept=".json,application/json"
+						on:change={importarDados}
+						style="display: none;"
+					/>
+				</label>
+			</div>
+		</section>
+
+		<!-- SECÇÃO SUPORTE E FEEDBACK -->
+		<section class="config-secao">
+			<h2><HelpCircle size={20} /> {$t('config.suporte.titulo')}</h2>
+			<p class="info-text">{$t('config.suporte.info')}</p>
+
+			<div class="config-item">
+				<label for="suporte-email">{$t('config.suporte.email')}</label>
+				<input
+					id="suporte-email"
+					type="email"
+					class="input"
+					bind:value={suporteEmail}
+					placeholder="seu.email@exemplo.com"
+				/>
+			</div>
+
+			<div class="config-item">
+				<label for="suporte-mensagem">{$t('config.suporte.mensagem')}</label>
+				<textarea
+					id="suporte-mensagem"
+					class="input"
+					rows="5"
+					bind:value={suporteMensagem}
+					placeholder={$t('config.suporte.mensagem')}
+				/>
+			</div>
+
+			<button
+				class="btn btn-primary btn-full-width"
+				on:click={enviarMensagemSuporte}
+				disabled={!suporteEmail.includes('@') || suporteMensagem.trim() === ''}
+			>
+				<Send size={16} />
+				{$t('config.suporte.enviar')}
+			</button>
+		</section>
+
+		<!-- SECÇÃO PERIGO / REPOSIÇÃO -->
+		<section class="config-secao">
+			<h2><RotateCcw size={20} /> {$t('config.perigo.titulo')}</h2>
+			<div class="config-acoes-perigo">
+				<button class="btn btn-secondary" on:click={() => (showResetModal = true)}>
+					{$t('config.perigo.repor')}
+				</button>
+				<button class="btn btn-danger" on:click={() => (showDeleteModal = true)}>
+					<Trash2 size={16} />
+					{$t('config.perigo.eliminar')}
+				</button>
+			</div>
+		</section>
 	</div>
 
-	<!-- secção para exibir a lista de lembretes do mês -->
-	<div class="reminders-section">
-		<h3 class="section-title">
-			{$t('calendar.lembretesDe', { mes: monthNamesTranslated[currentDate.getMonth()] })}
-		</h3>
-		<!-- verifica se existem lembretes para mostrar -->
-		{#if getMonthlyReminders().length > 0}
-			<ul class="reminders-list">
-				<!-- loop para mostrar cada grupo de lembretes por dia -->
-				{#each getMonthlyReminders() as dayReminders (dayReminders.date.toISOString())}
-					<li class="reminder-day-group">
-						<h4 class="reminder-date-header">{formatDisplayDate(dayReminders.date)}</h4>
-						<ul class="reminders-for-day">
-							<!-- loop para mostrar cada lembrete individual -->
-							{#each dayReminders.reminders as reminder (reminder.id)}
-								<li class="reminder-item-style">
-									<span class="reminder-time">{reminder.time}</span>
-									<span class="reminder-text">{reminder.text}</span>
-									<button
-										on:click|stopPropagation={() => removeReminder(dayReminders.date, reminder.id)}
-										class="icon-button danger"
-										aria-label={$t('calendar.modal.excluirLembreteAria')}
-									>
-										<TrashIcon size={16} />
-									</button>
-								</li>
-							{/each}
-						</ul>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<!-- mensagem se não houver lembretes -->
-			<p class="empty-message">{$t('calendar.nenhumLembrete')}</p>
-		{/if}
-	</div>
-
-	<!-- modal para adicionar um novo lembrete, só aparece se showReminderModal for true -->
-	{#if showReminderModal}
-		<div class="modal-backdrop" on:click={closeReminderModal}>
-			<div class="modal-dialog" on:click|stopPropagation>
-				<div class="modal-dialog-header">
-					<h2 class="modal-title">{$t('calendar.modal.novoLembrete')}</h2>
-					<button
-						class="close-modal-button"
-						on:click={closeReminderModal}
-						aria-label={$t('calendar.modal.fechar')}
-					>
-						<XIcon size={20} />
+	<!-- MODAIS -->
+	{#if showResetModal}
+		<div
+			class="modal-overlay"
+			on:click|self={() => (showResetModal = false)}
+			on:keydown|self={(e) => e.key === 'Escape' && (showResetModal = false)}
+			transition:fade
+		>
+			<div
+				class="modal-content"
+				role="dialog"
+				aria-labelledby="resetModalTitle"
+				aria-describedby="resetModalDesc"
+				tabindex="-1"
+				transition:slide|local={{ y: -50, duration: 250 }}
+			>
+				<h2 id="resetModalTitle"><RotateCcw size={24} /> {$t('modal.repor.titulo')}</h2>
+				<p id="resetModalDesc">{$t('modal.repor.descricao')}</p>
+				<div class="modal-actions">
+					<button class="btn btn-secondary" on:click={() => (showResetModal = false)}>
+						{$t('modal.repor.cancelar')}
+					</button>
+					<button class="btn btn-warning" on:click={resetarConfiguracoes}>
+						<RotateCcw size={16} />
+						{$t('modal.repor.confirmar')}
 					</button>
 				</div>
-				<!-- formulário para criar o lembrete -->
-				<form class="modal-form" on:submit|preventDefault={addReminder}>
-					<div class="form-input-group">
-						<label for="reminder-date-display">{$t('calendar.modal.dataSelecionada')}</label>
-						<input
-							type="text"
-							id="reminder-date-display"
-							readonly
-							value={formatDisplayDate(selectedDate)}
-							class="input-field readonly-display"
-						/>
-					</div>
-					<div class="form-input-group">
-						<label for="reminder-time-input">{$t('calendar.modal.horario')}</label>
-						<input
-							type="time"
-							id="reminder-time-input"
-							bind:value={reminderTime}
-							class="input-field"
-						/>
-					</div>
-					<div class="form-input-group required-field">
-						<label for="reminder-text-input">{$t('calendar.modal.descricao')}</label>
-						<input
-							type="text"
-							id="reminder-text-input"
-							bind:value={reminderText}
-							placeholder={$t('calendar.modal.placeholderDescricao')}
-							class="input-field"
-							required
-						/>
-					</div>
-					<div class="modal-dialog-actions">
-						<button type="submit" class="button primary-button"
-							>{$t('calendar.modal.salvar')}</button
-						>
-						<button type="button" class="button secondary-button" on:click={closeReminderModal}
-							>{$t('calendar.modal.cancelar')}</button
-						>
-					</div>
-				</form>
+			</div>
+		</div>
+	{/if}
+
+	{#if showExportModal}
+		<div
+			class="modal-overlay"
+			on:click|self={() => (showExportModal = false)}
+			on:keydown|self={(e) => e.key === 'Escape' && (showExportModal = false)}
+			transition:fade
+		>
+			<div
+				class="modal-content"
+				role="dialog"
+				aria-labelledby="exportModalTitle"
+				aria-describedby="exportModalDesc"
+				tabindex="-1"
+				transition:slide|local={{ y: -50, duration: 250 }}
+			>
+				<h2 id="exportModalTitle"><Download size={24} /> {$t('modal.exportar.titulo')}</h2>
+				<p id="exportModalDesc">{$t('modal.exportar.descricao')}</p>
+				<div class="modal-actions">
+					<button class="btn btn-secondary" on:click={() => (showExportModal = false)}>
+						{$t('modal.repor.cancelar')}
+					</button>
+					<button class="btn btn-primary" on:click={exportarDadosEFecharModal}>
+						<Download size={16} />
+						{$t('modal.exportar.exportar')}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if showDeleteModal}
+		<div
+			class="modal-overlay"
+			on:click|self={() => (showDeleteModal = false)}
+			on:keydown|self={(e) => e.key === 'Escape' && (showDeleteModal = false)}
+			transition:fade
+		>
+			<div
+				class="modal-content"
+				role="dialog"
+				aria-labelledby="deleteModalTitle"
+				aria-describedby="deleteModalDesc1 deleteModalDesc2 deleteModalDesc3"
+				tabindex="-1"
+				transition:slide|local={{ y: -50, duration: 250 }}
+			>
+				<h2 id="deleteModalTitle"><Trash2 size={24} /> {$t('modal.eliminar.titulo')}</h2>
+				<p id="deleteModalDesc1"><strong>{$t('modal.eliminar.atencao')}</strong></p>
+				<p id="deleteModalDesc2">{$t('modal.eliminar.descricao')}</p>
+				<p class="aviso-exclusao" id="deleteModalDesc3">{$t('modal.eliminar.avisoBackup')}</p>
+				<div class="modal-actions">
+					<button class="btn btn-secondary" on:click={() => (showDeleteModal = false)}>
+						{$t('modal.repor.cancelar')}
+					</button>
+					<button class="btn btn-danger" on:click={eliminarTodosDados}>
+						<Trash2 size={16} />
+						{$t('modal.eliminar.confirmar')}
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
 </div>
 
 <style>
-	/* variáveis de cor locais para este componente */
-	:root {
-		--local-reminder-background: #fff3b0;
-		--local-reminder-border: #ffd54f;
-		--local-reminder-indicator: #ff9800;
-	}
-	.calendar-component-container {
-		background-color: var(--content-background-color);
+	.info-text {
+		font-size: 0.9rem;
 		color: var(--app-text-color);
-		border-radius: var(--radius);
+		opacity: 0.85;
+		margin-bottom: 1rem;
+		margin-top: 0.25rem;
+		line-height: 1.5;
+	}
+
+	.btn-full-width {
+		width: 100%;
+	}
+	.configuracoes-container {
+		max-width: 1200px;
+		margin: 2rem auto;
+		padding: clamp(1rem, 2vw, 1.5rem); /* Padding responsivo */
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
+		background-color: var(--app-background-color);
 	}
-	.page-header-style {
+	header {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
 		padding-bottom: 1rem;
 		border-bottom: 1px solid var(--border-color);
 	}
-	.page-header-style h1 {
-		font-size: clamp(1.5rem, 4vw, 1.8rem);
+	h1 {
+		font-size: clamp(1.5rem, 4vw, 1.75rem); /* Ajuste de clamp */
 		color: var(--app-text-color);
 		margin: 0;
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
-		font-weight: 600;
-	}
-	.calendar-controls {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.5rem 0;
-	}
-	.current-month-year {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: var(--app-text-color);
-		text-align: center;
-		flex-grow: 1;
-	}
-	.month-nav-button {
-		padding: 0.5rem 0.8rem;
-		font-size: 1.2rem;
-	}
-
-	/* estilos para a grelha do calendário */
-	.calendar-grid-layout {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		border-top: 1px solid var(--border-color);
-		border-left: 1px solid var(--border-color);
-		border-radius: var(--radius);
-		overflow: hidden;
-	}
-	.day-name-header {
-		background-color: var(--card-background-color);
-		padding: 0.75rem 0.5rem;
-		text-align: center;
-		font-weight: 500;
-		font-size: 0.85rem;
-		color: var(--text-color-muted, var(--app-text-color));
-		border-right: 1px solid var(--border-color);
-		border-bottom: 1px solid var(--border-color);
-	}
-	.day-cell-style {
-		background-color: var(--card-background-color);
-		min-height: 100px;
-		padding: 0.5rem;
-		position: relative;
-		cursor: pointer;
-		transition: background-color 0.2s ease;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		border-right: 1px solid var(--border-color);
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.day-cell-style:hover,
-	.day-cell-style:focus-visible {
-		background-color: var(--border-color);
-		outline: 2px solid var(--primary-color);
-		outline-offset: -2px;
-	}
-	.day-cell-style.is-other-month {
-		background-color: var(--content-background-color);
-		color: var(--text-color-muted, var(--app-text-color));
-		cursor: default;
-	}
-	.day-cell-style.is-other-month:hover,
-	.day-cell-style.is-other-month:focus-visible {
-		background-color: var(--content-background-color);
-		outline: none;
-	}
-	.day-cell-style.is-today {
-		background-color: color-mix(in srgb, var(--primary-color) 15%, var(--card-background-color));
-		font-weight: 600;
-		border-right: 1px solid var(--primary-color);
-		border-bottom: 1px solid var(--primary-color);
-	}
-	.day-cell-style.is-today .day-number-display {
-		color: var(--primary-color);
-		font-weight: bold;
-	}
-	.day-cell-style.has-reminder-style {
-		background-color: var(--local-reminder-background);
-	}
-	.day-cell-style.has-reminder-style:hover {
-		background-color: color-mix(in srgb, var(--local-reminder-background) 80%, black);
-	}
-	.day-number-display {
-		display: inline-block;
-		font-size: 0.9rem;
-		margin-bottom: 0.25rem;
-		padding: 0.1rem 0.3rem;
-		border-radius: var(--radius);
-	}
-	.reminder-dot-indicator {
-		width: 7px;
-		height: 7px;
-		background-color: var(--local-reminder-indicator);
-		border-radius: 50%;
-		position: absolute;
-		top: 6px;
-		right: 6px;
-	}
-	/* estilos para a lista de lembretes */
-	.section-title {
-		font-size: 1.2rem;
-		font-weight: 600;
-		margin-bottom: 1rem;
-		color: var(--app-text-color);
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid var(--border-color);
-	}
-	.reminders-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-	.reminder-date-header {
-		font-size: 0.95rem;
-		color: var(--text-color-muted, var(--app-text-color));
-		margin: 0 0 0.5rem 0;
-		font-weight: 500;
-	}
-	.reminders-for-day {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
 		gap: 0.5rem;
+		font-weight: 600;
 	}
-	.reminder-item-style {
+	.header-controls .btn {
+		min-width: auto; /* Permitir que o botão encolha */
+		padding: 0.6rem 1rem; /* Padding ligeiramente menor para header */
+	}
+	.mensagem {
+		padding: 1rem;
+		border-radius: var(--radius);
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.6rem 0.8rem;
-		background-color: var(--card-background-color);
-		border-radius: var(--radius);
-		border: 1px solid var(--border-color);
-		border-left: 3px solid var(--local-reminder-border);
-	}
-	.reminder-time {
-		font-size: 0.85rem;
-		color: var(--text-color-muted, var(--app-text-color));
-		min-width: 50px;
 		font-weight: 500;
+		margin-bottom: 1rem;
 	}
-	.reminder-text {
-		flex-grow: 1;
-		font-size: 0.9rem;
+	.mensagem p {
+		margin: 0;
+		line-height: 1.4;
 	}
-	.empty-message {
-		color: var(--text-color-muted, var(--app-text-color));
-		font-style: italic;
-		padding: 1rem;
-		text-align: center;
-		background-color: var(--content-background-color);
-		border-radius: var(--radius);
+	.mensagem.sucesso {
+		background-color: var(--success-background-color);
+		color: var(--success-text-color);
+		border: 1px solid var(--success-color);
 	}
-	/* estilos para o modal */
-	.modal-backdrop {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: color-mix(in srgb, var(--app-background-color) 10%, black 60%);
+	.mensagem.erro {
+		background-color: var(--danger-background-color);
+		color: var(--danger-text-color);
+		border: 1px solid var(--danger-color);
+	}
+	.configuracoes-grid {
 		display: grid;
-		place-items: center;
-		z-index: 1000;
-		padding: 1rem;
+		grid-template-columns: repeat(
+			auto-fit,
+			minmax(min(100%, 320px), 1fr)
+		); /* Ajustado para telas menores */
+		gap: 1.5rem;
 	}
-	.modal-dialog {
-		background-color: var(--card-background-color);
-		padding: clamp(1.25rem, 4vw, 1.75rem);
+	.config-secao {
+		background: var(--card-background-color);
+		padding: 1.5rem;
 		border-radius: var(--radius);
-		width: 100%;
-		max-width: 450px;
 		box-shadow: var(--shadow);
 		border: 1px solid var(--border-color);
-	}
-	.modal-dialog-header {
 		display: flex;
-		justify-content: space-between;
+		flex-direction: column;
+		gap: 1.25rem; /* Espaçamento entre itens da seção */
+	}
+	.config-secao h2 {
+		margin: 0 0 0.75rem 0; /* Aumentado margin-bottom */
+		color: var(--app-text-color);
+		font-size: 1.15rem; /* Ligeiramente menor */
+		display: flex;
 		align-items: center;
-		margin-bottom: 1rem;
+		gap: 0.5rem;
 		padding-bottom: 0.75rem;
 		border-bottom: 1px solid var(--border-color);
-	}
-	.modal-title {
-		font-size: 1.25rem;
 		font-weight: 600;
-		color: var(--app-text-color);
-		margin: 0;
 	}
-	.close-modal-button {
-		background: none;
-		border: none;
-		font-size: 1.5rem;
-		cursor: pointer;
-		color: var(--text-color-muted, var(--app-text-color));
-		padding: 0 0.25rem;
-		line-height: 1;
-	}
-	.close-modal-button:hover {
-		color: var(--app-text-color);
-	}
-	.modal-form {
+	.config-item {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.4rem; /* Espaço entre label e input/botão */
 	}
-	.form-input-group {
+
+	.config-item label,
+	label.btn {
+		font-weight: 500;
+		font-size: 0.9rem; /* Tamanho de label */
+		color: var(--app-text-color);
 		display: flex;
-		flex-direction: column;
+		align-items: center;
 		gap: 0.4rem;
 	}
-	.form-input-group label {
-		font-weight: 500;
-		color: var(--app-text-color);
-		display: block;
-		font-size: 0.9rem;
+	label.btn {
+		display: inline-flex;
+		justify-content: center;
+		font-size: 0.9rem; /* Consistência com outros botões */
+		padding: 0.6rem 1rem;
 	}
-	.form-input-group.required-field label::after {
-		content: '*';
-		color: var(--danger-color);
-		margin-left: 0.2rem;
-	}
-	.input-field {
+
+	.input,
+	select.input,
+	textarea.input {
 		width: 100%;
-		padding: 0.65rem 0.85rem;
+		padding: 0.65rem 0.9rem;
 		border: 1px solid var(--input-border-color);
-		border-radius: var(--radius);
-		font-size: 0.95rem;
-		font-family: inherit;
 		background-color: var(--input-background-color);
 		color: var(--app-text-color);
+		border-radius: var(--radius);
+		font-size: 0.95rem;
 		transition:
 			border-color 0.2s ease,
 			box-shadow 0.2s ease;
+		font-family: inherit;
 	}
-	.input-field:focus {
+
+	textarea.input {
+		resize: vertical;
+		min-height: 100px;
+	}
+
+	select.input option {
+		background-color: var(--input-background-color);
+		color: var(--app-text-color);
+	}
+
+	.input:disabled,
+	select.input:disabled,
+	textarea.input:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+		background-color: var(--content-background-color);
+		color: var(--text-color-muted);
+		border-color: var(--border-color);
+	}
+
+	.input:focus,
+	select.input:focus,
+	textarea.input:focus {
 		border-color: var(--primary-color);
 		outline: none;
 		box-shadow: 0 0 0 3px var(--input-focus-ring-color);
 	}
-	.input-field.readonly-display {
-		background-color: var(--content-background-color);
-		color: var(--text-color-muted);
-		cursor: default;
-	}
-	.modal-dialog-actions {
+	.tema-opcoes {
 		display: flex;
-		gap: 0.75rem;
-		justify-content: flex-end;
-		margin-top: 1rem;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
-	/* estilos gerais para botões */
-	.button {
-		padding: 0.65rem 1.25rem;
+	.tema-btn {
+		background-color: var(--content-background-color);
+		color: var(--app-text-color);
+		border: 1px solid var(--border-color);
+		padding: 0.5rem 0.8rem;
+		font-size: 0.85rem;
+	}
+	.tema-btn:hover:not(.ativo) {
+		border-color: var(--primary-color);
+		background-color: color-mix(
+			in srgb,
+			var(--content-background-color) 80%,
+			var(--primary-color) 20%
+		);
+	}
+	.tema-btn.ativo {
+		background-color: var(--primary-color);
+		color: var(--primary-color-text);
+		border-color: var(--primary-color);
+	}
+	.tema-btn.ativo:hover {
+		background-color: var(--primary-color-hover);
+	}
+
+	.btn {
+		padding: 0.6rem 1.1rem;
 		border-radius: var(--radius);
 		cursor: pointer;
 		display: inline-flex;
@@ -746,79 +823,181 @@
 			border-color 0.2s ease,
 			color 0.2s ease,
 			opacity 0.2s ease;
+		white-space: nowrap;
 	}
-	.button:focus-visible {
+	.btn:focus-visible {
 		outline: 2px solid var(--primary-color);
 		outline-offset: 2px;
 	}
-	.button.primary-button {
+	.btn:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+	.btn-primary {
 		background-color: var(--primary-color);
 		color: var(--primary-color-text);
 		border-color: var(--primary-color);
 	}
-	.button.primary-button:hover {
+	.btn-primary:hover:not(:disabled) {
 		background-color: var(--primary-color-hover);
 		border-color: var(--primary-color-hover);
 	}
-	.button.secondary-button {
-		background-color: var(--card-background-color);
+	.btn-primary:disabled {
+		background-color: var(--secondary-color);
+		border-color: var(--secondary-color);
+		color: var(--secondary-color-text);
+	}
+	.btn-secondary {
+		background-color: var(--content-background-color);
 		color: var(--app-text-color);
+		border: 1px solid var(--border-color);
+	}
+	.btn-secondary:hover:not(:disabled) {
+		background-color: var(--border-color);
+		border-color: var(--app-text-color);
+	}
+	.btn-secondary:disabled {
+		background-color: var(--content-background-color);
+		color: var(--text-color-muted);
 		border-color: var(--border-color);
 	}
-	.button.secondary-button:hover {
-		background-color: var(--border-color);
+	.btn-warning {
+		background-color: var(--warning-color);
+		color: var(--app-text-color);
+		border-color: var(--warning-color);
 	}
-	.icon-button {
-		background: none;
-		border: none;
-		padding: 0.3rem;
-		cursor: pointer;
-		color: var(--text-color-muted, var(--app-text-color));
-		display: inline-flex;
+	.btn-warning:hover:not(:disabled) {
+		background-color: color-mix(in srgb, var(--warning-color) 85%, black 15%);
+		border-color: color-mix(in srgb, var(--warning-color) 85%, black 15%);
+	}
+	.btn-danger {
+		background-color: var(--danger-color);
+		color: var(--primary-color-text);
+		border-color: var(--danger-color);
+	}
+
+	.btn-danger:hover:not(:disabled) {
+		background-color: var(--danger-color-hover);
+		border-color: var(--danger-color-hover);
+	}
+	.config-acoes-perigo {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-top: 0.5rem;
+	}
+	/* Adicionado para espaçar o botão de envio na seção de suporte */
+	.config-secao > .btn-full-width {
+		margin-top: 0.5rem;
+	}
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.75);
+		display: grid;
+		place-items: center;
+		z-index: 1000;
+		padding: 1rem;
+	}
+	.modal-content {
+		background: var(--card-background-color);
+		color: var(--app-text-color);
+		padding: clamp(1.25rem, 4vw, 1.75rem);
 		border-radius: var(--radius);
+		width: 100%;
+		max-width: 500px;
+		max-height: 90vh;
+		overflow-y: auto;
+		box-shadow: var(--shadow);
+		border: 1px solid var(--border-color);
 	}
-	.icon-button:hover {
-		color: var(--primary-color);
-		background-color: var(--border-color);
+	.modal-content:focus {
+		outline: none;
 	}
-	.icon-button.danger:hover {
-		color: var(--danger-color);
-		background-color: color-mix(in srgb, var(--danger-color) 15%, transparent);
+	.modal-content h2 {
+		margin: 0 0 1.25rem 0;
+		font-size: 1.25rem;
+		color: var(--app-text-color);
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-color);
 	}
-	/* estilos para ecrãs mais pequenos (mobile) */
+	.modal-content p {
+		margin-bottom: 1rem;
+		line-height: 1.6;
+		color: var(--text-color-muted);
+		font-size: 0.9rem;
+	}
+	.modal-content p strong {
+		color: var(--app-text-color);
+		font-weight: 600;
+	}
+	.modal-actions {
+		display: flex;
+		gap: 0.75rem;
+		justify-content: flex-end;
+		margin-top: 1.5rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--border-color);
+	}
+	.aviso-exclusao {
+		background-color: var(--danger-background-color);
+		color: var(--danger-text-color);
+		padding: 0.8rem 1rem;
+		border-radius: var(--radius);
+		border-left: 3px solid var(--danger-color);
+		font-size: 0.85rem;
+	}
+
 	@media (max-width: 768px) {
-		.calendar-component-container {
-			padding: 1rem;
-			gap: 1rem;
-		}
-		.page-header-style h1 {
-			font-size: 1.4rem;
-		}
-		.current-month-year {
-			font-size: 1.1rem;
-		}
-		.day-cell-style {
-			min-height: 70px;
-			padding: 0.3rem;
-			font-size: 0.8rem;
-		}
-		.day-name-header {
-			padding: 0.5rem 0.25rem;
-			font-size: 0.75rem;
-		}
-		.reminder-item-style {
+		header {
 			flex-direction: column;
 			align-items: flex-start;
-			gap: 0.3rem;
+			gap: 1rem;
 		}
-		.modal-dialog {
-			max-width: calc(100% - 2rem);
+		.header-controls {
+			width: 100%;
 		}
-		.modal-dialog-actions {
+		.header-controls .btn {
+			width: 100%;
+		}
+		.config-secao .config-item .btn-full-width,
+		.config-secao .config-item label.btn-full-width {
+			width: 100%;
+		}
+		.config-acoes-perigo {
+			flex-direction: column;
+		}
+		.config-acoes-perigo .btn {
+			width: 100%;
+		}
+		.modal-actions {
 			flex-direction: column-reverse;
 		}
-		.modal-dialog-actions .button {
+		.modal-actions .btn {
 			width: 100%;
+		}
+	}
+	@media (max-width: 480px) {
+		.tema-opcoes {
+			flex-direction: column;
+		}
+		.tema-opcoes .btn {
+			width: 100%;
+		}
+		.configuracoes-container {
+			padding: 0.75rem;
+		}
+		.config-secao {
+			padding: 1rem;
+		}
+		.modal-content {
+			padding: 1rem;
 		}
 	}
 </style>
