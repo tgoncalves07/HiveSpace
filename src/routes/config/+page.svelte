@@ -370,7 +370,7 @@
 	}
 </script>
 
-<!-- O HTML e CSS permanecem os mesmos -->
+<!-- O HTML e CSS permanecem os mesmos-->
 <div class="configuracoes-container">
 	<header>
 		<h1><Settings size={28} /> {$t('config.titulo')}</h1>
