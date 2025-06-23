@@ -18,7 +18,7 @@
 	import Moon from 'lucide-svelte/icons/moon';
 	// Adicione outros ícones se necessário
 
-	// 1. DICIONÁRIO DE TRADUÇÕES LOCAL para esta página (Dashboard)
+	// 1. DICIONÁRIO DE TRADUÇÕES
 	const dashboardTranslations = {
 		pt: {
 			'dashboard.saudacao.madrugada': 'Boa madrugada',
@@ -30,7 +30,7 @@
 			'dashboard.resumo.totalTarefas': 'Total de Tarefas',
 			'dashboard.resumo.totalProjetos': 'Total de Projetos',
 			'dashboard.resumo.lembretesHoje': 'Lembretes para Hoje',
-			'dashboard.statusTarefas.titulo': 'Status das Tarefas',
+			'dashboard.statusTarefas.titulo': 'Estado das Tarefas',
 			'dashboard.statusTarefas.avisoAtrasadas': '{count} tarefa(s) atrasada(s)!',
 			'dashboard.statusTarefas.pendentes': 'Pendentes',
 			'dashboard.statusTarefas.emProgresso': 'Em Progresso',
@@ -41,7 +41,7 @@
 			'dashboard.visaoProjetos.ideias': 'Ideias',
 			'dashboard.visaoProjetos.pendentes': 'Pendentes',
 			'dashboard.visaoProjetos.emProcesso': 'Em Processo',
-			'dashboard.calendario.titulo': 'Seu Calendário',
+			'dashboard.calendario.titulo': 'Calendário',
 			'dashboard.calendario.mesAnteriorAria': 'Mês anterior',
 			'dashboard.calendario.proximoMesAria': 'Próximo mês',
 			'dashboard.calendario.selecionarDiaAria': 'Selecionar dia {day} de {month} de {year}',

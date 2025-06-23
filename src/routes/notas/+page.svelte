@@ -30,7 +30,7 @@
 			'notas.stats.atualizadas': 'Atualizadas Recentemente',
 			'notas.listaTitulo': 'Notas',
 			'notas.vazio.semBusca':
-				'Você ainda não adicionou nenhuma nota. Clique em "Adicionar Nota" para começar!',
+				'Ainda não adicionou nenhuma nota. Clique em "Adicionar Nota" para começar!',
 			'notas.vazio.comBusca': 'Nenhuma nota encontrada para "{searchTerm}".',
 			'notas.acao.editar': 'Editar Nota',
 			'notas.acao.excluir': 'Excluir Nota',

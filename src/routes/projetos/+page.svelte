@@ -28,7 +28,7 @@
 	const projectTranslations = {
 		pt: {
 			'projetos.tituloPagina': 'Os Meus Projetos',
-			'projetos.filtro.todosStatus': 'Todos os Status',
+			'projetos.filtro.todosStatus': 'Todos os Projetos',
 			'projetos.botao.novo': 'Novo Projeto',
 			'projetos.stats.total': 'Total de Projetos',
 			'projetos.stats.finalizados': 'Projetos Finalizados',
@@ -43,7 +43,7 @@
 			'projetos.card.detalhes.prazo': 'Prazo',
 			'projetos.card.dataNaoDisponivel': 'N/D',
 			'projetos.card.dataInvalida': 'Data Inválida',
-			'projetos.coluna.vazia': 'Nenhum projeto neste status.',
+			'projetos.coluna.vazia': 'Nenhum projeto',
 			'projetos.modal.editar.titulo': 'Editar Projeto',
 			'projetos.modal.adicionar.titulo': 'Adicionar Novo Projeto',
 			'projetos.modal.fecharAria': 'Fechar modal',
@@ -68,7 +68,7 @@
 		},
 		en: {
 			'projetos.tituloPagina': 'My Projects',
-			'projetos.filtro.todosStatus': 'All Statuses',
+			'projetos.filtro.todosStatus': 'All Projects',
 			'projetos.botao.novo': 'New Project',
 			'projetos.stats.total': 'Total Projects',
 			'projetos.stats.finalizados': 'Completed Projects',
@@ -83,7 +83,7 @@
 			'projetos.card.detalhes.prazo': 'Deadline',
 			'projetos.card.dataNaoDisponivel': 'N/A',
 			'projetos.card.dataInvalida': 'Invalid Date',
-			'projetos.coluna.vazia': 'No projects in this status.',
+			'projetos.coluna.vazia': 'No project',
 			'projetos.modal.editar.titulo': 'Edit Project',
 			'projetos.modal.adicionar.titulo': 'Add New Project',
 			'projetos.modal.fecharAria': 'Close modal',
