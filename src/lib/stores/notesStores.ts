@@ -1,20 +1,19 @@
-// src/lib/stores/notesStores.ts
 import { writable, type Writable } from 'svelte/store';
 
-// 1. Definição da Interface da Nota
+// Definição da Interface da Nota
 export interface Note {
 	id: string;
 	title: string;
-	description?: string; // Descrição é opcional
+	description?: string;
 	content: string;
-	createdAt: string; // Armazenar como string ISO para facilitar a serialização
-	updatedAt: string; // Armazenar como string ISO
+	createdAt: string;
+	updatedAt: string;
 }
 
-// 2. Chave para o LocalStorage
+// Chave para o LocalStorage
 const NOTES_STORAGE_KEY = 'svelte-notes-app-data';
 
-// 3. Função para gerar IDs únicos (simples)
+// Função para gerar IDs únicos (simples)
 function generateId(): string {
 	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
 		return crypto.randomUUID();
@@ -22,7 +21,7 @@ function generateId(): string {
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-// 4. Função para carregar notas do LocalStorage
+// Função para carregar notas do LocalStorage
 function loadNotesFromLocalStorage(): Note[] {
 	if (typeof window !== 'undefined' && window.localStorage) {
 		const storedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
@@ -45,18 +44,18 @@ function loadNotesFromLocalStorage(): Note[] {
 	return [];
 }
 
-// 5. Criação da Store Writable
+// Criação da Store Writable
 const initialNotes = loadNotesFromLocalStorage();
 const { subscribe, set, update }: Writable<Note[]> = writable<Note[]>(initialNotes);
 
-// 6. Função para salvar notas no LocalStorage
+// Função para salvar notas no LocalStorage
 function saveNotesToLocalStorage(notes: Note[]) {
 	if (typeof window !== 'undefined' && window.localStorage) {
 		localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
 	}
 }
 
-// 7. Funções de CRUD para a Store
+// Funções de CRUD para a Store
 function addNote(title: string, description: string = '', content: string): void {
 	const newNote: Note = {
 		id: generateId(),
@@ -101,21 +100,19 @@ function deleteNote(id: string): void {
 	});
 }
 
-// <-- ADICIONE ESTA FUNÇÃO
-/**
- * Limpa todas as notas da store e do localStorage.
- */
+// Função para resetar as notas
+// Esta função limpa o estado da store e o localStorage
 function resetNotes(): void {
 	const emptyNotes: Note[] = [];
-	set(emptyNotes); // Limpa o estado da store
-	saveNotesToLocalStorage(emptyNotes); // Limpa o localStorage
+	set(emptyNotes);
+	saveNotesToLocalStorage(emptyNotes);
 }
 
-// 8. Exportação da Store e funções
+// Exportação da Store e funções
 export const notesStore = {
 	subscribe,
 	addNote,
 	updateNote,
 	deleteNote,
-	reset: resetNotes // <-- EXPORTE O NOVO MÉTODO AQUI
+	reset: resetNotes
 };

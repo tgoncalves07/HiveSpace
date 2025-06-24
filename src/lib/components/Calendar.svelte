@@ -6,7 +6,6 @@
 	import { configuracoes, type Idioma as AppIdioma } from '../../lib/stores/pageStore';
 
 	// --- DICIONÁRIO DE TRADUÇÕES PARA O CALENDÁRIO ---
-	// objeto que guarda todas as traduções do componente
 	const calendarTranslations = {
 		pt: {
 			'calendar.titulo': ' O Meu Calendário',
@@ -82,7 +81,7 @@
 		}
 	};
 
-	// cria a função de tradução 't' que reage a mudanças de idioma
+	// Função de tradução reativa
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number | undefined>): string => {
 			const selectedLang = $cfg.idioma;
@@ -106,17 +105,14 @@
 		};
 	});
 
-	// data reativa que controla o mês/ano exibido
+	// Variáveis de estado do calendário
 	let currentDate = new Date();
-	// data selecionada pelo usuário para adicionar um lembrete
 	let selectedDate: Date | null = null;
-	// controla a visibilidade do modal de lembretes
 	let showReminderModal = false;
-	// inputs do novo lembrete
 	let reminderText = '';
 	let reminderTime = '09:00';
 
-	// nomes de meses e dias que mudam com o idioma
+	// Nomes dos meses e dias traduzidos
 	$: monthNamesTranslated = [
 		$t('calendar.meses.janeiro'),
 		$t('calendar.meses.fevereiro'),
@@ -141,17 +137,17 @@
 		$t('calendar.dias.sab')
 	];
 
-	// função para ir para o mês anterior
+	// Função para ir para o mês anterior
 	function previousMonth() {
 		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 	}
 
-	// função para ir para o próximo mês
+	// Função para ir para o próximo mês
 	function nextMonth() {
 		currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 	}
 
-	// define como é um objeto de dia no calendário
+	// Interface para um dia do calendário
 	interface CalendarDay {
 		date: Date;
 		isCurrentMonth: boolean;
@@ -159,7 +155,7 @@
 		hasReminder: boolean;
 	}
 
-	// gera os dias para preencher a grelha do calendário
+	// Gera os dias do calendário
 	function getCalendarDays(): CalendarDay[] {
 		const year = currentDate.getFullYear();
 		const month = currentDate.getMonth();
@@ -180,7 +176,7 @@
 		return days;
 	}
 
-	// verifica se uma data é hoje
+	// Verifica se a data é hoje
 	function isToday(date: Date): boolean {
 		const today = new Date();
 		return (
@@ -190,20 +186,20 @@
 		);
 	}
 
-	// formata a data para uma chave de texto (ex: 2024-05-21)
+	// Formata a data para chave de texto
 	function formatDateKey(date: Date): string {
 		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
 			date.getDate()
 		).padStart(2, '0')}`;
 	}
 
-	// verifica se existe um lembrete numa data
+	// Verifica se há lembrete na data
 	function hasReminderOnDate(date: Date): boolean {
 		const dateKey = formatDateKey(date);
 		return $reminders[dateKey] && $reminders[dateKey].length > 0;
 	}
 
-	// formata a data para ser mais legível para o usuário
+	// Formata a data para exibição
 	function formatDisplayDate(date: Date | null): string {
 		if (!date) return '';
 		const currentLang: AppIdioma = $configuracoes.idioma || 'pt';
@@ -216,7 +212,7 @@
 		});
 	}
 
-	// abre o modal para adicionar um novo lembrete
+	// Seleciona data para adicionar lembrete
 	function selectDateForReminder(date: Date) {
 		selectedDate = date;
 		showReminderModal = true;
@@ -224,7 +220,7 @@
 		reminderTime = '09:00';
 	}
 
-	// adiciona um novo lembrete ao store global
+	// Adiciona lembrete
 	function addReminder() {
 		if (!reminderText.trim() || !selectedDate) return;
 		const dateKey = formatDateKey(selectedDate);
@@ -242,7 +238,7 @@
 		closeReminderModal();
 	}
 
-	// remove um lembrete do store global
+	// Remove lembrete
 	function removeReminder(date: Date, reminderId: string) {
 		const dateKey = formatDateKey(date);
 		reminders.update((currentReminders) => {
@@ -254,7 +250,7 @@
 		});
 	}
 
-	// fecha o modal e limpa os campos
+	// Fecha o modal de lembrete
 	function closeReminderModal() {
 		showReminderModal = false;
 		selectedDate = null;
@@ -262,19 +258,19 @@
 		reminderTime = '09:00';
 	}
 
-	// define como os lembretes são agrupados por dia
+	// Interface para grupo de lembretes do mês
 	interface MonthlyReminderGroup {
 		date: Date;
 		reminders: ReminderItem[];
 	}
 
-	// busca os lembretes para uma data específica
+	// Busca lembretes de uma data
 	function getRemindersForDate(date: Date): ReminderItem[] {
 		const dateKey = formatDateKey(date);
 		return $reminders[dateKey] || [];
 	}
 
-	// busca e agrupa todos os lembretes do mês para a lista
+	// Busca e agrupa lembretes do mês
 	function getMonthlyReminders(): MonthlyReminderGroup[] {
 		const month = currentDate.getMonth();
 		const year = currentDate.getFullYear();
@@ -289,14 +285,14 @@
 	}
 </script>
 
-<!-- Resto do HTML e CSS, que já estava correto -->
-<!-- container principal do componente -->
+<!-- Container principal do calendário -->
 <div class="calendar-component-container">
+	<!-- Cabeçalho do calendário -->
 	<header class="page-header-style">
 		<h1><CalendarIcon size={28} /> {$t('calendar.titulo')}</h1>
 	</header>
 
-	<!-- controlos para navegar entre os meses -->
+	<!-- Controles de navegação de mês -->
 	<div class="calendar-controls">
 		<button
 			on:click={previousMonth}
@@ -314,14 +310,14 @@
 		>
 	</div>
 
-	<!-- grelha do calendário -->
+	<!-- Grelha do calendário -->
 	<div class="calendar-grid-layout">
-		<!-- cabeçalhos com os nomes dos dias da semana -->
+		<!-- Cabeçalhos dos dias da semana -->
 		{#each dayNamesTranslated as dayName (dayName)}
 			<div class="day-name-header">{dayName}</div>
 		{/each}
 
-		<!-- loop para criar as células de cada dia do mês -->
+		<!-- Células dos dias do mês -->
 		{#each getCalendarDays() as day (day.date.toISOString())}
 			<div
 				class="day-cell-style"
@@ -337,7 +333,7 @@
 				aria-label={$t('calendar.selecionarDataAria', { data: day.date.getDate() })}
 			>
 				<span class="day-number-display">{day.date.getDate()}</span>
-				<!-- indicador visual se o dia tem um lembrete -->
+				<!-- Indicador visual de lembrete -->
 				{#if day.hasReminder && day.isCurrentMonth}
 					<div class="reminder-dot-indicator"></div>
 				{/if}
@@ -345,20 +341,17 @@
 		{/each}
 	</div>
 
-	<!-- secção para exibir a lista de lembretes do mês -->
+	<!-- Lista de lembretes do mês -->
 	<div class="reminders-section">
 		<h3 class="section-title">
 			{$t('calendar.lembretesDe', { mes: monthNamesTranslated[currentDate.getMonth()] })}
 		</h3>
-		<!-- verifica se existem lembretes para mostrar -->
 		{#if getMonthlyReminders().length > 0}
 			<ul class="reminders-list">
-				<!-- loop para mostrar cada grupo de lembretes por dia -->
 				{#each getMonthlyReminders() as dayReminders (dayReminders.date.toISOString())}
 					<li class="reminder-day-group">
 						<h4 class="reminder-date-header">{formatDisplayDate(dayReminders.date)}</h4>
 						<ul class="reminders-for-day">
-							<!-- loop para mostrar cada lembrete individual -->
 							{#each dayReminders.reminders as reminder (reminder.id)}
 								<li class="reminder-item-style">
 									<span class="reminder-time">{reminder.time}</span>
@@ -377,12 +370,12 @@
 				{/each}
 			</ul>
 		{:else}
-			<!-- mensagem se não houver lembretes -->
+			<!-- Mensagem se não houver lembretes -->
 			<p class="empty-message">{$t('calendar.nenhumLembrete')}</p>
 		{/if}
 	</div>
 
-	<!-- modal para adicionar um novo lembrete, só aparece se showReminderModal for true -->
+	<!-- Modal para adicionar lembrete -->
 	{#if showReminderModal}
 		<div class="modal-backdrop" on:click={closeReminderModal}>
 			<div class="modal-dialog" on:click|stopPropagation>
@@ -396,7 +389,7 @@
 						<XIcon size={20} />
 					</button>
 				</div>
-				<!-- formulário para criar o lembrete -->
+				<!-- Formulário do lembrete -->
 				<form class="modal-form" on:submit|preventDefault={addReminder}>
 					<div class="form-input-group">
 						<label for="reminder-date-display">{$t('calendar.modal.dataSelecionada')}</label>
@@ -443,7 +436,6 @@
 </div>
 
 <style>
-	/* variáveis de cor locais para este componente */
 	:root {
 		--local-reminder-background: #fff3b0;
 		--local-reminder-border: #ffd54f;
@@ -571,7 +563,6 @@
 		top: 6px;
 		right: 6px;
 	}
-	/* estilos para a lista de lembretes */
 	.section-title {
 		font-size: 1.2rem;
 		font-weight: 600;
@@ -630,7 +621,6 @@
 		background-color: var(--content-background-color);
 		border-radius: var(--radius);
 	}
-	/* estilos para o modal */
 	.modal-backdrop {
 		position: fixed;
 		top: 0;
@@ -728,7 +718,6 @@
 		justify-content: flex-end;
 		margin-top: 1rem;
 	}
-	/* estilos gerais para botões */
 	.button {
 		padding: 0.65rem 1.25rem;
 		border-radius: var(--radius);
@@ -785,7 +774,6 @@
 		color: var(--danger-color);
 		background-color: color-mix(in srgb, var(--danger-color) 15%, transparent);
 	}
-	/* estilos para ecrãs mais pequenos (mobile) */
 	@media (max-width: 768px) {
 		.calendar-component-container {
 			padding: 1rem;

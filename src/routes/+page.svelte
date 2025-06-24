@@ -1,11 +1,10 @@
-<!-- routes/dashboard/+page.svelte (ou o nome correto da sua página) -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { estatisticasTarefas } from '../lib/stores/tarefas'; // Adapte o caminho se necessário
-	import { estatisticasProjetos } from '../lib/stores/projetos'; // Adapte o caminho se necessário
-	import { reminders } from '../lib/stores/reminders'; // Adapte o caminho se necessário
-	import { derived } from 'svelte/store'; // ESSENCIAL
-	import { configuracoes } from '../lib/stores/pageStore'; // Adapte o caminho se necessário
+	import { estatisticasTarefas } from '../lib/stores/tarefas';
+	import { estatisticasProjetos } from '../lib/stores/projetos';
+	import { reminders } from '../lib/stores/reminders';
+	import { derived } from 'svelte/store';
+	import { configuracoes } from '../lib/stores/pageStore';
 
 	import ClipboardList from 'lucide-svelte/icons/clipboard-list';
 	import Target from 'lucide-svelte/icons/target';
@@ -16,9 +15,8 @@
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
-	// Adicione outros ícones se necessário
 
-	// 1. DICIONÁRIO DE TRADUÇÕES
+	// DICIONÁRIO DE TRADUÇÕES
 	const dashboardTranslations = {
 		pt: {
 			'dashboard.saudacao.madrugada': 'Boa madrugada',
@@ -112,10 +110,9 @@
 			'dashboard.diasSemana.sex': 'Fri',
 			'dashboard.diasSemana.sab': 'Sat'
 		}
-		// Adicionar outros idiomas se necessário
 	};
 
-	// 2. Store derivada 't' LOCAL
+	// Store derivada 't' LOCAL
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const selectedLang = $cfg.idioma;
@@ -132,12 +129,10 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	let currentDate = new Date();
 	let selectedDate = new Date();
-	let calendarDays: any[] = []; // Mantido como any por simplicidade, idealmente teria um tipo
-
+	let calendarDays: any[] = [];
 	let estatisticasT = {
 		total: 0,
 		porStatus: {} as Record<string, number>,
@@ -153,12 +148,11 @@
 	// Reatividade para lembretes e regeneração do calendário
 	let previousRemindersString = JSON.stringify(todosLembretes);
 	$: {
-		const currentReminders = $reminders || {}; // Assegura que $reminders não é undefined
+		const currentReminders = $reminders || {};
 		const currentRemindersString = JSON.stringify(currentReminders);
 		if (previousRemindersString !== currentRemindersString) {
 			todosLembretes = currentReminders;
 			previousRemindersString = currentRemindersString;
-			// Apenas regenera o calendário se estiver no lado do cliente
 			if (typeof window !== 'undefined') {
 				generateCalendarDays();
 			}
@@ -168,18 +162,15 @@
 	let displayProgressProjetos = 0;
 	$: {
 		const statsP = estatisticasP; // Usa a variável local que já é reativa
-		// CORREÇÃO APLICADA AQUI: 'Finalizado' mudado para 'finalizado' (ou a chave correta que seu store usa)
 		const finalizadoCount = Number(statsP?.porStatus?.['finalizado']) || 0;
 		const totalProjetos = Number(statsP?.total) || 0;
 		let calculatedProgress = 0;
 		if (totalProjetos > 0 && Number.isFinite(finalizadoCount)) {
-			// Adicionado isFinite para finalizadoCount
 			calculatedProgress = (finalizadoCount / totalProjetos) * 100;
 		}
 		displayProgressProjetos = Number.isFinite(calculatedProgress) ? calculatedProgress : 0;
 	}
 
-	// Nomes dos meses e dias da semana agora são reativos à tradução
 	$: monthNamesTranslated = [
 		$t('dashboard.meses.janeiro'),
 		$t('dashboard.meses.fevereiro'),
@@ -225,7 +216,7 @@
 			const date = new Date(startDate);
 			date.setDate(startDate.getDate() + i);
 			days.push({
-				dateObj: new Date(date), // Guarda o objeto Date completo
+				dateObj: new Date(date),
 				dayOfMonth: date.getDate(),
 				month: date.getMonth(),
 				year: date.getFullYear(),
@@ -267,10 +258,10 @@
 	}
 
 	function getGreetingIcon() {
-		// Lógica do ícone permanece a mesma
+		//logica de icon
 		const hour = new Date().getHours();
 		if (hour < 5) return Moon;
-		if (hour < 7) return Sun; // Pode ajustar se quiser ícone diferente para "amanhecendo"
+		if (hour < 7) return Sun;
 		if (hour < 12) return Sun;
 		if (hour < 18) return Sun;
 		return Moon;
@@ -281,35 +272,21 @@
 		return todosLembretes[todayKey]?.length || 0;
 	}
 
-	// Labels para status de tarefas e projetos, usando tradução
-	// As chaves devem corresponder às retornadas pelas suas stores de estatísticas
-	// Se as stores retornam 'Pendente', 'Em Processo', 'Concluída' para tarefas,
-	// e 'Ideia', 'Pendente', 'Em Processo', 'Finalizado' para projetos.
 	$: taskStatusLabels = {
 		pendente: $t('dashboard.statusTarefas.pendentes'),
 		emProgresso: $t('dashboard.statusTarefas.emProgresso'),
 		concluida: $t('dashboard.statusTarefas.concluidas')
-		// Adicione 'Cancelada' se for exibido
 	};
 
 	$: projectStatusLabels = {
 		ideia: $t('dashboard.visaoProjetos.ideias'),
 		pendente: $t('dashboard.visaoProjetos.pendentes'),
 		emProcesso: $t('dashboard.visaoProjetos.emProcesso')
-		// 'finalizado' (ou a chave correta) é tratado separadamente no círculo e na contagem
 	};
 
 	onMount(() => {
 		generateCalendarDays();
-		// Para depuração, se as estatísticas não estiverem a carregar como esperado:
-		// console.log('Estatísticas Tarefas Iniciais:', $estatisticasTarefas);
-		// console.log('Estatísticas Projetos Iniciais:', $estatisticasProjetos);
 	});
-
-	// $: if ($configuracoes) { // Para depuração
-	// 	console.log('[DASHBOARD] Idioma da store configuracoes:', $configuracoes.idioma);
-	// 	console.log('[DASHBOARD] Saudacao Traduzida ($t):', getGreeting());
-	// }
 </script>
 
 <div class="dashboard-page-container">
@@ -491,7 +468,6 @@
 </div>
 
 <style>
-	/* Cole aqui os seus estilos CSS originais para a página de dashboard */
 	.dashboard-page-container {
 		min-height: 100vh;
 		background-color: var(--content-background-color);
@@ -666,17 +642,14 @@
 		transition: width 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
 		border-radius: 4px;
 	}
-	/* Ajuste para corresponder às chaves usadas em taskStatusLabels e estatisticasT.porStatus */
+
 	.status-progress-fill.fill-pendente {
-		/* Era fill-pendente */
-		background-color: var(--warning-color); /* Exemplo, ajuste conforme necessário */
+		background-color: var(--warning-color);
 	}
 	.status-progress-fill.fill-emProgresso {
-		/* Era fill-emProgresso */
 		background-color: var(--primary-color);
 	}
 	.status-progress-fill.fill-concluida {
-		/* Era fill-concluida */
 		background-color: var(--success-color);
 	}
 	.status-info-block {
@@ -792,8 +765,7 @@
 		color: var(--primary-color);
 	}
 	.breakdown-status-dot.dot-emProcesso {
-		/* Corrigido: era dot-emProcesso */
-		color: var(--success-color); /* Ajuste se a cor para "Em Processo" de projetos for diferente */
+		color: var(--success-color);
 	}
 	.calendar-navigation-header {
 		display: flex;
@@ -1005,14 +977,12 @@
 			font-size: 0.8rem;
 		}
 		.stat-progress-circle {
-			/* Corrigido para .stat-progress-circle para corresponder ao HTML */
-			width: 100px; /* Ajustado como no seu CSS original */
-			height: 100px; /* Ajustado como no seu CSS original */
+			width: 100px;
+			height: 100px;
 		}
 		.circle-visual-progress::after {
-			/* Corrigido para .circle-visual-progress::after */
-			width: calc(100% - 26px); /* Ajustado para corresponder ao seu CSS (72px de 98px) */
-			height: calc(100% - 26px); /* Ajustado para corresponder ao seu CSS */
+			width: calc(100% - 26px);
+			height: calc(100% - 26px);
 		}
 		.circle-inner-text {
 			font-size: 1rem;

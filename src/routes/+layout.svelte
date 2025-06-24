@@ -1,25 +1,24 @@
-<!-- +layout.svelte -->
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
 	import '../app.css';
-	import { configuracoes, type Tema, type Idioma as AppIdioma } from '../lib/stores/pageStore'; // Importa configuracoes
+	import { configuracoes, type Tema, type Idioma as AppIdioma } from '../lib/stores/pageStore';
 	import { isSidebarOpen } from '../lib/stores/uiStore';
-	import { derived } from 'svelte/store'; // ESSENCIAL para a store 't' local
+	import { derived } from 'svelte/store';
 
-	// 1. DICIONÁRIO DE TRADUÇÕES LOCAL para o Layout
+	// DICIONÁRIO DE TRADUÇÕES LOCAL
 	const layoutTranslations = {
 		pt: {
 			'layout.link.principal': 'Página Principal',
 			'layout.link.projetos': 'Projetos',
 			'layout.link.tarefas': 'Tarefas',
 			'layout.link.notas': 'Notas',
-			'layout.link.calendario': 'Calendário', // Corrigido para 'Calendário'
+			'layout.link.calendario': 'Calendário',
 			'layout.link.configuracoes': 'Configurações',
 			'layout.link.sobre': 'Sobre',
 			'layout.sidebar.navegacaoPrincipalAria': 'Navegação principal',
 			'layout.sidebar.brandAlt': 'Ícone HiveSpace',
-			'layout.sidebar.toggleAria': 'Alternar barra lateral' // Adicionado para o clique na brand
+			'layout.sidebar.toggleAria': 'Alternar barra lateral'
 		},
 		en: {
 			'layout.link.principal': 'Main Page',
@@ -33,10 +32,9 @@
 			'layout.sidebar.brandAlt': 'HiveSpace Icon',
 			'layout.sidebar.toggleAria': 'Toggle sidebar'
 		}
-		// Adicionar outros idiomas se necessário
 	};
 
-	// 2. Store derivada 't' LOCAL
+	// Store derivada 't' LOCAL
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const selectedLang = $cfg.idioma as keyof typeof layoutTranslations; // Tipo mais específico
@@ -51,12 +49,10 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	let draggedIndex: number | null = null;
 	let dragOverIndex: number | null = null;
 
-	// Default links (sem labels traduzidos aqui, serão gerados reativamente)
 	const baseLinksStructure = [
 		{ path: '/', labelKey: 'layout.link.principal', icon: '/home.svg' },
 		{ path: '/projetos', labelKey: 'layout.link.projetos', icon: '/mala.svg' },
@@ -69,20 +65,18 @@
 
 	type LinkConfig = (typeof baseLinksStructure)[0];
 	interface DisplayLink extends LinkConfig {
-		label: string; // Label traduzido
+		label: string;
 	}
 
 	let links: DisplayLink[] = [];
 
-	// 3. Links da sidebar agora são reativos à tradução
+	// Links da sidebar reativos à tradução
 	$: links = baseLinksStructure.map((linkConfig) => ({
 		...linkConfig,
 		label: $t(linkConfig.labelKey)
 	}));
 
-	// A função aplicarTemaConfigurado agora será chamada reativamente pela subscrição à store 'configuracoes'
-	// Esta função é mantida caso precise ser chamada explicitamente em algum momento, mas
-	// o `onMount` e a subscrição à store `configuracoes` (em `pageStore.ts`) já devem cuidar disso.
+	// Função para aplicar tema e idioma ao document.documentElement
 	function aplicarTemaEIdioma(temaConfig: Tema, idiomaConfig: AppIdioma) {
 		const temaFinal =
 			temaConfig === 'sistema'
@@ -106,9 +100,6 @@
 		if (savedOrderString) {
 			try {
 				const savedPathOrder: string[] = JSON.parse(savedOrderString);
-				// Reordenar baseLinksStructure com base na ordem salva antes de criar 'links' reativos
-				// Esta parte precisa ser mais robusta para garantir que todos os links base existam
-				// e para lidar com links novos/removidos na baseLinksStructure.
 				const orderedBaseLinks: LinkConfig[] = [];
 				const basePaths = baseLinksStructure.map((l) => l.path);
 
@@ -118,40 +109,21 @@
 						orderedBaseLinks.push(foundLink);
 					}
 				});
-				// Adicionar links base que não estavam na ordem salva (novos links)
+				// Adicionar links base que não estavam na ordem
 				baseLinksStructure.forEach((baseLink) => {
 					if (!orderedBaseLinks.find((l) => l.path === baseLink.path)) {
 						orderedBaseLinks.push(baseLink);
 					}
 				});
-				// Filtrar links que podem ter sido removidos da base mas estavam salvos
 				const finalOrderedBaseLinks = orderedBaseLinks.filter((ol) => basePaths.includes(ol.path));
 
-				// A variável reativa 'links' será atualizada automaticamente devido à mudança em $t
-				// quando 'configuracoes' carregar. Para a ordem, precisamos da estrutura base.
-				// Se quisermos que a ordem persistida seja usada para gerar 'links' reativamente,
-				// a 'baseLinksStructure' em si precisaria ser reordenada.
-				// Ou, 'links' não seria $: derivada de baseLinksStructure, mas construída aqui e depois
-				// re-traduzida por uma subscrição a `$t` ou `$configuracoes`.
-				// Por simplicidade, vamos reordenar baseLinksStructure uma vez no onMount
-				// e deixar que a reatividade de `$t` cuide da tradução.
-				// Isso significa que `baseLinksStructure` será modificada aqui.
 				if (finalOrderedBaseLinks.length === baseLinksStructure.length) {
-					// Garante que não perdemos links base
-					// Reatribuir para que 'links' reativo possa pegar a nova ordem.
-					// Esta abordagem é um pouco complexa para a reatividade da ordem E tradução.
-					// Idealmente, a ordem seria uma store separada, ou 'links' seria uma writable store.
-					// Por ora, vamos assumir que a tradução é o foco principal.
-					// A forma mais simples para a ordem persistida seria reconstruir `links` não reativamente aqui
-					// e depois ter uma subscrição separada para atualizar os labels quando o idioma mudar.
-					// Para manter o padrão do $:
 					const tempLinks = finalOrderedBaseLinks.map((linkConfig) => ({
 						...linkConfig,
-						label: $t(linkConfig.labelKey) // Traduz com o idioma atual
+						label: $t(linkConfig.labelKey)
 					}));
-					links = tempLinks; // Atribui os links ordenados e traduzidos
+					links = tempLinks;
 				} else {
-					// Fallback se a ordem salva estiver inconsistente
 					links = baseLinksStructure.map((linkConfig) => ({
 						...linkConfig,
 						label: $t(linkConfig.labelKey)
@@ -165,18 +137,11 @@
 				}));
 			}
 		} else {
-			// Se não houver ordem salva, 'links' já será gerado reativamente a partir de baseLinksStructure
-			// A primeira tradução ocorrerá quando $t estiver disponível (após $configuracoes carregar).
-			// Para garantir que os labels são traduzidos no mount inicial:
 			links = baseLinksStructure.map((linkConfig) => ({
 				...linkConfig,
 				label: $t(linkConfig.labelKey)
 			}));
 		}
-
-		// A store 'configuracoes' já deve carregar do localStorage em sua própria definição (pageStore.ts)
-		// e aplicar o tema/idioma através de sua própria subscrição.
-		// O onMount do layout pode precisar ouvir mudanças no tema do sistema se a store não fizer isso.
 
 		mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 		systemThemeChangeHandler = () => {
@@ -185,35 +150,18 @@
 			unsub();
 
 			if (currentConfig && currentConfig.tema === 'sistema') {
-				// pageStore.ts já deve lidar com a atualização do data-tema
-				// Se não, precisaríamos chamar aplicarTemaEIdioma aqui.
-				// Apenas para garantir que a store é notificada se quisermos que ela faça algo mais:
-				// configuracoes.update(cfg => ({...cfg})); // Força uma notificação (geralmente não necessário)
-				// O importante é que document.documentElement.setAttribute('data-tema', ...) seja chamado.
-				// E isso já é feito pela subscrição em pageStore.ts.
-				aplicarTemaEIdioma('sistema', currentConfig.idioma); // Redundante se pageStore.ts faz
+				aplicarTemaEIdioma('sistema', currentConfig.idioma);
 			}
 		};
 		if (mediaQuery) {
-			// Verifica se mediaQuery não é null
 			mediaQuery.addEventListener('change', systemThemeChangeHandler);
 		}
 
-		// A subscrição em pageStore.ts já aplica tema e idioma ao document.documentElement.
-		// Esta subscrição aqui seria para reações específicas do layout, se necessário.
-		// Por exemplo, se `links` não fosse reativo aos labels, precisaríamos re-traduzir aqui.
-		// Como `links` é reativo a `$t`, e `$t` é reativo a `$configuracoes`, já deve funcionar.
 		unsubscribeConfigStore = configuracoes.subscribe((currentConfigs) => {
-			// Esta chamada é provavelmente redundante se pageStore.ts já faz o mesmo.
-			// No entanto, não prejudica e garante que o layout está sincronizado.
 			aplicarTemaEIdioma(currentConfigs.tema, currentConfigs.idioma);
-
-			// Se a ordem dos links fosse uma store e os labels não fossem reativos via $t, faríamos:
-			// links = links.map(link => ({ ...link, label: $t(link.labelKey) }));
 		});
 
-		// Aplicação inicial do tema e idioma no primeiro carregamento,
-		// caso pageStore.ts ainda não o tenha feito ou para garantir.
+		// Aplicar tema e idioma iniciais
 		let initialConfigs: { tema: Tema; idioma: AppIdioma } | undefined;
 		const unsubInitial = configuracoes.subscribe((value) => (initialConfigs = value));
 		unsubInitial();
@@ -232,6 +180,7 @@
 	});
 
 	function handleDragStart(event: DragEvent, index: number) {
+		// Previne o comportamento padrão do navegador
 		draggedIndex = index;
 		if (event.dataTransfer) {
 			event.dataTransfer.effectAllowed = 'move';
@@ -240,29 +189,27 @@
 	}
 
 	function handleDragOver(event: DragEvent, index: number) {
+		// Previne o comportamento padrão do navegador
 		event.preventDefault();
 		if (draggedIndex === null || draggedIndex === index) return;
 
-		// Não alteramos dragOverIndex aqui para evitar saltos rápidos
-		// A reordenação acontece com base no dragOver do elemento alvo.
 		const items = [...links];
 		const draggedItem = items[draggedIndex];
 		items.splice(draggedIndex, 1);
 		items.splice(index, 0, draggedItem);
 
 		links = items;
-		draggedIndex = index; // Atualiza o índice do item arrastado para sua nova posição
+		draggedIndex = index;
 	}
 
 	function handleDragEnd() {
+		// Remove a classe de arrasto de todos os links
 		if (draggedIndex !== null) {
-			// Se houve um drag
-			// Salva a nova ordem usando os paths originais para persistência
 			const pathOrderToSave = links.map((link) => link.path);
 			localStorage.setItem('sidebarLinksOrder', JSON.stringify(pathOrderToSave));
 		}
 		draggedIndex = null;
-		dragOverIndex = null; // Resetado aqui também
+		dragOverIndex = null;
 		document
 			.querySelectorAll('.sidebar-links a.dragging')
 			.forEach((el) => el.classList.remove('dragging'));
@@ -282,16 +229,13 @@
 		touchStartY = touch.clientY;
 		const targetLink = event.currentTarget as HTMLElement;
 		targetLink.classList.add('dragging');
-		// Previne scroll da página enquanto arrasta o item na sidebar
-		// event.preventDefault(); // Cuidado: pode impedir o scroll da sidebar se ela for longa
 	}
 
 	function handleTouchMove(event: TouchEvent) {
 		if (draggedIndex === null) return;
-		// event.preventDefault(); // Cuidado: pode impedir o scroll da sidebar se ela for longa
 
 		const touch = event.touches[0];
-		// Encontrar o elemento <a> diretamente sob o toque
+
 		const targetElement = document
 			.elementFromPoint(touch.clientX, touch.clientY)
 			?.closest('.sidebar-links a');
@@ -301,7 +245,6 @@
 			const newDragOverIndex = allLinkElements.indexOf(targetElement);
 
 			if (newDragOverIndex !== -1 && newDragOverIndex !== draggedIndex) {
-				// dragOverIndex não é mais necessário para a lógica de reordenação direta
 				const items = [...links];
 				const draggedItem = items[draggedIndex];
 				items.splice(draggedIndex, 1);
@@ -314,7 +257,7 @@
 	}
 
 	function handleTouchEnd() {
-		handleDragEnd(); // Usa a mesma lógica para salvar e limpar classes
+		handleDragEnd();
 	}
 </script>
 
@@ -369,7 +312,6 @@
 </main>
 
 <style>
-	/* Seus estilos CSS existentes permanecem aqui */
 	.sidebar {
 		position: fixed;
 		top: 0;

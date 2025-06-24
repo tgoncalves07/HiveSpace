@@ -1,4 +1,3 @@
-<!--src/routes/config/+page.svelte-->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
 	import { onMount } from 'svelte';
@@ -144,6 +143,7 @@
 	};
 
 	const t = derived(configuracoes, ($cfg) => {
+		// Função de tradução que aceita uma chave e um objeto de substituições
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const lang = $cfg.idioma as keyof typeof translations;
 			let text = translations[lang]?.[key] || translations.pt?.[key] || key;
@@ -229,11 +229,13 @@
 	}
 
 	function importarDados(event: Event) {
+		// Verifica se o evento é de um input de arquivo
 		const input = event.target as HTMLInputElement;
 		const ficheiro = input.files?.[0];
 		if (!ficheiro) return;
 
 		const reader = new FileReader();
+		// Limpa mensagens anteriores
 		reader.onload = (e) => {
 			try {
 				const dadosImportados = JSON.parse(e.target?.result as string);
@@ -274,7 +276,7 @@
 				if (dadosImportados.notas) {
 					try {
 						// Para stores customizadas, use os métodos que você criou
-						notesStore.reset(); // Limpa a store antes de adicionar
+						notesStore.reset();
 						dadosImportados.notas.forEach((note) => {
 							notesStore.addNote(note.title, note.description, note.content);
 						});
@@ -293,6 +295,7 @@
 				}
 
 				if (algumaCoisaImportada) {
+					// Se alguma coisa foi importada, atualiza o estado
 					configuracoesIniciaisString = JSON.stringify($configuracoes);
 					alteracoesPendentes = false;
 					mostrarMensagem($t('config.mensagens.importadoSucesso'), 'sucesso');
@@ -325,7 +328,7 @@
 		// Resetar as stores ativas para refletir a limpeza
 		projetos.set([]);
 		tarefas.set([]);
-		notesStore.reset(); // <-- AQUI ESTÁ A CORREÇÃO: Use o método reset() em vez de set()
+		notesStore.reset();
 		reminders.set({});
 
 		// Resetar as configurações da aplicação
@@ -347,6 +350,7 @@
 	}
 
 	function mostrarMensagem(mensagem: string, tipo: 'sucesso' | 'erro') {
+		// Limpa mensagens anteriores
 		if (tipo === 'sucesso') {
 			mensagemErro = '';
 			mensagemSucesso = mensagem;
@@ -370,7 +374,6 @@
 	}
 </script>
 
-<!-- O HTML e CSS permanecem os mesmos-->
 <div class="configuracoes-container">
 	<header>
 		<h1><Settings size={28} /> {$t('config.titulo')}</h1>

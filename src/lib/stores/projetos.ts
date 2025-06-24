@@ -1,4 +1,3 @@
-// stores/projetos.ts
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 
@@ -7,7 +6,7 @@ type Status = 'Ideia' | 'Pendente' | 'Em Processo' | 'Finalizado';
 export interface Projeto {
 	id: number;
 	nome: string;
-	descricao?: string; // Descrição pode ser opcional
+	descricao?: string;
 	status: Status;
 	dataPrazo?: string;
 	dataInicio?: string;

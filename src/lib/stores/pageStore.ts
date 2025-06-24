@@ -1,4 +1,3 @@
-// src/lib/stores/pageStore.ts
 import { writable, type Writable } from 'svelte/store';
 
 // Tipos para Configurações Gerais
@@ -22,17 +21,13 @@ export interface ConfiguracoesState {
 	notificacoesPush: boolean;
 	notificacoesSom: boolean;
 	lembretePrazos: boolean;
-	backupEmail: string; // Usado para backup manual e automático
+	backupEmail: string;
 	nome: string;
 	email: string;
 	funcao: string;
-
-	// Novas configurações para Backup Automático
 	backupAutomaticoHabilitado: boolean;
 	frequenciaBackupAutomatico: FrequenciaBackup;
-	ultimoBackupAutomatico: string | null; // Armazena como ISO date string
-
-	// Novas configurações para Padrões de Tarefas
+	ultimoBackupAutomatico: string | null;
 	prioridadePadraoTarefa: PrioridadeTarefa;
 	lembretePadraoTarefa: TipoLembreteTarefa;
 }
@@ -56,7 +51,7 @@ const defaultConfig: ConfiguracoesState = {
 
 	// Defaults para backup automático
 	backupAutomaticoHabilitado: false,
-	frequenciaBackupAutomatico: 'semanal', // Default pode ser 'nunca' ou 'semanal'
+	frequenciaBackupAutomatico: 'semanal',
 	ultimoBackupAutomatico: null,
 
 	// Defaults para padrões de tarefas
@@ -71,8 +66,8 @@ function loadConfigFromLocalStorage(): ConfiguracoesState {
 		if (storedConfig) {
 			try {
 				const parsedConfig = JSON.parse(storedConfig) as Partial<ConfiguracoesState>;
-				// Merge com os defaults para garantir que todas as chaves existem
-				// e para lidar com novas configurações adicionadas ao defaultConfig
+				// Mescla os valores armazenados com os defaults
+				// Isso garante que novos campos adicionados não sejam perdidos
 				return { ...defaultConfig, ...parsedConfig };
 			} catch (e) {
 				console.error('Erro ao carregar configurações do localStorage:', e);
@@ -100,7 +95,6 @@ if (typeof window !== 'undefined') {
 			temaFinal = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
 		}
 		document.documentElement.setAttribute('data-tema', temaFinal);
-		// console.log('[pageStore.ts] Configurações atualizadas e persistidas:', currentConfig); // Comente ou remova para menos logs
 	});
 
 	const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -112,7 +106,6 @@ if (typeof window !== 'undefined') {
 		if (currentConfigValue && currentConfigValue.tema === 'sistema') {
 			const novoTemaSistema = mediaQuery.matches ? 'escuro' : 'claro';
 			document.documentElement.setAttribute('data-tema', novoTemaSistema);
-			// console.log('[pageStore.ts] Tema do sistema mudou para:', novoTemaSistema,); // Comente ou remova
 		}
 	};
 	mediaQuery.addEventListener('change', systemThemeChangeHandler);
@@ -125,9 +118,4 @@ export const configuracoes = {
 	reset: () => configuracoesStore.set({ ...defaultConfig })
 };
 
-// Exportar defaultConfig pode ser útil para a função de importação,
-// para garantir que um arquivo importado seja mesclado com os defaults mais recentes.
-// Se não quiser exportar, a lógica de importação pode precisar ser ajustada
-// ou depender do estado atual da store (que já é mesclado com defaults).
-// Por simplicidade e robustez na importação, exportar pode ser uma boa ideia:
 export const getAppDefaults = (): ConfiguracoesState => ({ ...defaultConfig });

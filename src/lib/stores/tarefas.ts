@@ -1,5 +1,3 @@
-// lib/stores/tarefas.ts
-
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 
@@ -31,6 +29,7 @@ function createPersistentTarefas() {
 	}
 
 	const load = () => {
+		// Carrega as tarefas do localStorage se estiver no ambiente do navegador
 		if (browser) {
 			const saved = localStorage.getItem('tarefas');
 			if (saved) {
@@ -61,7 +60,6 @@ function createPersistentTarefas() {
 		removerTarefa: (id: number) => {
 			update((tarefas) => persist(tarefas.filter((t) => t.id !== id)));
 		},
-		// <<< A FUNÇÃO QUE FALTAVA FOI ADICIONADA AQUI! >>>
 		// Esta função é chamada quando uma tarefa é solta em uma nova coluna.
 		atualizarStatusTarefa: (id: number, novoStatus: StatusTarefa) => {
 			update((tarefas) => {

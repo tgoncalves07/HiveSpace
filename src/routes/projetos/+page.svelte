@@ -107,8 +107,8 @@
 			'projetos.modal.excluir.confirmar': 'Delete Project'
 		}
 	};
-
 	const t = derived(configuracoes, ($cfg) => {
+		// Função de tradução que seleciona o idioma atual e retorna a função de tradução
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const selectedLang = $cfg.idioma;
 			let langDict =
@@ -231,8 +231,6 @@
 
 			if (langTag === 'pt') langTag = 'pt-PT';
 			else if (langTag === 'en') langTag = 'en-GB';
-			else if (langTag === 'es') langTag = 'es-ES';
-			else if (langTag === 'fr') langTag = 'fr-FR';
 
 			// A data vinda do input é 'YYYY-MM-DD'. Para evitar problemas de fuso horário,
 			// adicionamos 'T00:00:00' para garantir que é interpretada como o início do dia local.
@@ -263,7 +261,6 @@
 	);
 </script>
 
-<!-- O TEMPLATE HTML/MARKUP permanece o mesmo e já está correto -->
 <div class="page-container">
 	<header class="page-header">
 		<h1 class="page-title">{$t('projetos.tituloPagina')}</h1>
@@ -503,7 +500,6 @@
 </div>
 
 <style>
-	/* Seus estilos CSS permanecem inalterados */
 	.page-container {
 		max-width: 1300px;
 		margin: 0 auto;
@@ -546,7 +542,6 @@
 		color: var(--text-color-muted, var(--app-text-color)); /* Fallback */
 	}
 	.input-field.minimal {
-		/* Estilo para o select do filtro */
 		background-color: transparent;
 		border: none;
 		padding: 0.25rem;
@@ -604,9 +599,7 @@
 		align-items: flex-start;
 	}
 	.status-column {
-		background-color: var(
-			--content-background-color
-		); /* Ou card-background-color se preferir colunas mais destacadas */
+		background-color: var(--content-background-color);
 		padding: 1rem;
 		border-radius: var(--radius);
 		border: 1px solid var(--border-color);
@@ -692,7 +685,7 @@
 	.tarefa-action-buttons {
 		display: flex;
 		gap: 0.25rem;
-		opacity: 0; /* Aparece no hover */
+		opacity: 0;
 		transition: opacity 0.2s ease;
 		flex-shrink: 0;
 	}
@@ -722,7 +715,7 @@
 		gap: 0.4rem 0.8rem;
 		font-size: 0.8rem;
 		color: var(--text-color-muted, var(--app-text-color));
-		margin-top: 0.4rem; /* Adicionado espaçamento */
+		margin-top: 0.4rem;
 	}
 	.detail-item {
 		display: flex;

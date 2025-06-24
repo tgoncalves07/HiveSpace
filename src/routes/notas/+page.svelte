@@ -15,9 +15,7 @@
 		AlertTriangle
 	} from 'lucide-svelte';
 
-	// Importar APENAS a store de configurações de pageStore.ts
-	// A função 't' será definida localmente.
-	import { configuracoes } from '../../lib/stores/pageStore'; // Ajuste o caminho se necessário
+	import { configuracoes } from '../../lib/stores/pageStore';
 
 	// --- DICIONÁRIO DE TRADUÇÕES PARA A PÁGINA DE NOTAS ---
 	const notesTranslations = {
@@ -88,7 +86,6 @@
 			'notas.modal.fechar': 'Close modal',
 			'notas.erro.camposObrigatorios': 'Title and content are required.'
 		}
-		// Adicionar 'es' e 'fr' se necessário
 	};
 
 	// Store derivada 't' LOCAL para este componente
@@ -99,7 +96,7 @@
 			let langDict =
 				notesTranslations[selectedLang as keyof typeof notesTranslations] || notesTranslations.pt;
 
-			// Pega o texto da chave; se não existir no dicionário atual (nem no fallback 'pt'), retorna a própria chave.
+			// utiliza o texto da chave; se não existir no dicionário atual (nem no fallback 'pt'), retorna a própria chave.
 			let text = langDict?.[key] || notesTranslations.pt?.[key] || key;
 
 			if (replacements) {
@@ -110,7 +107,6 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	let currentNote: Partial<Note> = { title: '', description: '', content: '' };
 	let showModal = false;
@@ -136,6 +132,7 @@
 		validationError = '';
 
 		const noteDataToSave = {
+			// Garantindo que os campos sejam strings não vazias
 			title: currentNote.title.trim(),
 			description: currentNote.description?.trim() || '',
 			content: currentNote.content.trim()
@@ -155,6 +152,7 @@
 	}
 
 	function openEditModal(note: Note) {
+		// Copia os dados da nota para o formulário
 		currentNote = { ...note };
 		isEditing = true;
 		showModal = true;
@@ -202,8 +200,6 @@
 		let langTag = $configuracoes.idioma || 'pt';
 		if (langTag === 'pt') langTag = 'pt-PT';
 		else if (langTag === 'en') langTag = 'en-US';
-		else if (langTag === 'es') langTag = 'es-ES';
-		else if (langTag === 'fr') langTag = 'fr-FR';
 
 		try {
 			const dateOptions: Intl.DateTimeFormatOptions = {
@@ -470,7 +466,6 @@
 </div>
 
 <style>
-	/* Estilos como na sua última versão */
 	.validation-error-message {
 		color: var(--danger-text-color, #a94442);
 		background-color: var(--danger-background-color, #f2dede);

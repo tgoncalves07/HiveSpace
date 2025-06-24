@@ -1,15 +1,14 @@
-<!-- routes/tarefas/+page.svelte -->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
-	import { projetos } from '../../lib/stores/projetos'; // Store de projetos
+	import { projetos } from '../../lib/stores/projetos';
 	import {
-		tarefas as tarefasStore, // Renomeado para tarefasStore para evitar conflito
+		tarefas as tarefasStore,
 		type Tarefa,
-		type StatusTarefa, // Agora importa o tipo REAL da store
-		type Prioridade // Agora importa o tipo REAL da store
+		type StatusTarefa,
+		type Prioridade
 	} from '../../lib/stores/tarefas';
 	import { onMount } from 'svelte';
-	import { derived } from 'svelte/store'; // ESSENCIAL para a store 't' local
+	import { derived } from 'svelte/store';
 	import {
 		Plus,
 		Calendar,
@@ -29,11 +28,10 @@
 		Activity
 	} from 'lucide-svelte';
 
-	// 1. Importar APENAS a store 'configuracoes' de pageStore.ts
-	import { configuracoes } from '../../lib/stores/pageStore'; // VERIFIQUE ESTE CAMINHO
+	import { configuracoes } from '../../lib/stores/pageStore';
 
-	// 2. DICIONÁRIO DE TRADUÇÕES LOCAL para esta página (Tarefas)
-	//    Certifique-se que TODAS as chaves usadas no template abaixo estão aqui.
+	// DICIONÁRIO DE TRADUÇÕES LOCAL
+
 	const taskTranslations = {
 		pt: {
 			'tarefas.tituloPagina': 'As Minhas Tarefas',
@@ -139,10 +137,9 @@
 			'tarefas.modal.excluir.aviso': 'This action cannot be undone.',
 			'tarefas.modal.excluir.confirmar': 'Delete Task'
 		}
-		// Adicionar outros idiomas aqui, se necessário
 	};
 
-	// 3. Store derivada 't' LOCAL, exatamente como nos outros exemplos.
+	// Store derivada 't' LOCAL
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number>): string => {
 			const selectedLang = $cfg.idioma;
@@ -158,7 +155,6 @@
 			return text;
 		};
 	});
-	// --- FIM DA LÓGICA DE TRADUÇÃO LOCAL ---
 
 	let projetoSelecionado: number | 'sem-projeto' = 'sem-projeto';
 	let filtroProjetoId: number | 'todos' | 'sem-projeto' = 'todos';
@@ -171,13 +167,13 @@
 	let tarefasFiltradas: Tarefa[] = [];
 	let erroValidacao = '';
 
-	// Estes são os valores para os status. Os labels virão das traduções.
+	// Estes são os valores para os estados.
 	const statusValores: StatusTarefa[] = ['Pendente', 'Em Progresso', 'Concluída', 'Cancelada'];
 
 	// Para os cabeçalhos das colunas
 	$: statusOptionsDisplay = statusValores.map((statusValue) => {
 		let keyBase = 'tarefas.coluna.';
-		let icon = Clock; // default
+		let icon = Clock;
 		switch (statusValue) {
 			case 'Pendente':
 				keyBase += 'pendente';
@@ -206,6 +202,7 @@
 	});
 
 	function validarDatas(): boolean {
+		// Validação de datas para evitar inconsistências
 		erroValidacao = '';
 		let projetoEncontrado =
 			projetoSelecionado !== 'sem-projeto' && typeof projetoSelecionado === 'number'
@@ -218,6 +215,7 @@
 		}
 
 		if (projetoEncontrado && projetoEncontrado.dataPrazo) {
+			// Verifica se a data de previsão ou final está após o prazo do projeto
 			const dataPrazoProjeto = new Date(projetoEncontrado.dataPrazo);
 			const prazoFormatado = formatarData(projetoEncontrado.dataPrazo);
 
@@ -248,6 +246,7 @@
 	}
 
 	const handleDragStart = (event: DragEvent, taskId: number) => {
+		// Previne o comportamento padrão do navegador
 		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 		draggedTaskId = taskId;
 		(event.target as HTMLElement).classList.add('dragging');
@@ -260,7 +259,6 @@
 	const handleDrop = (event: DragEvent, newStatus: StatusTarefa) => {
 		event.preventDefault();
 		if (draggedTaskId !== null) {
-			// ESTA LINHA AGORA FUNCIONA PORQUE A FUNÇÃO EXISTE NA STORE!
 			tarefasStore.atualizarStatusTarefa(draggedTaskId, newStatus);
 		}
 	};
@@ -307,8 +305,6 @@
 			let langTag = $configuracoes.idioma || 'pt';
 			if (langTag === 'pt') langTag = 'pt-PT';
 			else if (langTag === 'en') langTag = 'en-GB';
-			else if (langTag === 'es') langTag = 'es-ES';
-			else if (langTag === 'fr') langTag = 'fr-FR';
 
 			return new Date(dataString).toLocaleDateString(langTag, {
 				day: '2-digit',
@@ -632,7 +628,6 @@
 </div>
 
 <style>
-	/* Seus estilos CSS originais podem ser colados aqui sem alterações */
 	.tarefas-page-container {
 		max-width: 1300px;
 		margin: 0 auto;
