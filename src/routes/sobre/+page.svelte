@@ -84,7 +84,10 @@
 			const selectedLang = $cfg.idioma;
 			let langDict =
 				aboutTranslations[selectedLang as keyof typeof aboutTranslations] || aboutTranslations.pt;
-			let text = langDict?.[key] || aboutTranslations.pt?.[key] || key;
+			let text =
+				(langDict as Record<string, string>)?.[key] ||
+				(aboutTranslations.pt as Record<string, string>)?.[key] ||
+				key;
 
 			if (replacements) {
 				for (const k in replacements) {

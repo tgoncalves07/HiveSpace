@@ -2,7 +2,7 @@ import { writable, type Writable } from 'svelte/store';
 
 // Tipos para Configurações Gerais
 export type Tema = 'claro' | 'escuro' | 'sistema';
-export type Idioma = 'pt' | 'en' | 'es' | 'fr';
+export type Idioma = 'pt-PT' | 'en-GB';
 export type FormatoHora = '24h' | '12h';
 
 // Tipos para Backup Automático
@@ -38,7 +38,7 @@ const CONFIG_STORAGE_KEY = 'app-configuracoes';
 // Valores Padrão (incluindo os novos campos)
 const defaultConfig: ConfiguracoesState = {
 	tema: 'sistema',
-	idioma: 'pt',
+	idioma: 'pt-PT',
 	formatoHora: '24h',
 	notificacoesEmail: true,
 	notificacoesPush: true,

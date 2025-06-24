@@ -119,7 +119,10 @@
 			let langDict =
 				dashboardTranslations[selectedLang as keyof typeof dashboardTranslations] ||
 				dashboardTranslations.pt;
-			let text = langDict?.[key] || dashboardTranslations.pt?.[key] || key;
+			let text =
+				(langDict as Record<string, string>)?.[key] ||
+				(dashboardTranslations.pt as Record<string, string>)?.[key] ||
+				key;
 
 			if (replacements) {
 				for (const k in replacements) {
@@ -354,11 +357,12 @@
 			</div>
 			<div class="status-items-grid">
 				{#each ['pendente', 'emProgresso', 'concluida'] as statusKey (statusKey)}
+					{@const typedStatusKey = statusKey as keyof typeof taskStatusLabels}
 					{@const count = estatisticasT.porStatus[statusKey] || 0}
 					<div class="status-item-detail">
 						<div class="status-info-block">
 							<span class="status-number-text">{count}</span>
-							<span class="status-label-text">{taskStatusLabels[statusKey]}</span>
+							<span class="status-label-text">{taskStatusLabels[typedStatusKey]}</span>
 						</div>
 						<div class="status-progress-bar">
 							<div
@@ -407,7 +411,7 @@
 							<span class="breakdown-status-dot {item.colorClass}"><Circle size={12} /></span>
 							<span class="breakdown-label">
 								{estatisticasP.porStatus[item.key] || 0}
-								{projectStatusLabels[item.key]}
+								{projectStatusLabels[item.key as keyof typeof projectStatusLabels]}
 							</span>
 						</div>
 					{/each}

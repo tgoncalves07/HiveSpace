@@ -35,7 +35,9 @@
 	} from 'lucide-svelte';
 
 	// --- DICIONÁRIO DE TRADUÇÕES ---
-	const translations = {
+	type TranslationDict = { [key: string]: string };
+
+	const translations: { [lang: string]: TranslationDict } = {
 		pt: {
 			'config.titulo': 'Configurações',
 			'config.salvar': 'Guardar Alterações',
@@ -277,9 +279,11 @@
 					try {
 						// Para stores customizadas, use os métodos que você criou
 						notesStore.reset();
-						dadosImportados.notas.forEach((note) => {
-							notesStore.addNote(note.title, note.description, note.content);
-						});
+						dadosImportados.notas.forEach(
+							(note: { title: string; description: string; content: string }) => {
+								notesStore.addNote(note.title, note.description, note.content);
+							}
+						);
 						algumaCoisaImportada = true;
 					} catch (err) {
 						console.error("Falha ao importar a secção 'notas':", err);
@@ -453,14 +457,10 @@
 
 			<p class="info-text">{$t('config.dados.importarInfo')}</p>
 			<div class="config-item">
-				<label
+				<button
+					type="button"
 					class="btn btn-secondary btn-full-width"
-					for="importar-dados-input"
-					role="button"
-					tabindex="0"
-					on:keydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') (e.currentTarget as HTMLLabelElement).click();
-					}}
+					on:click={() => document.getElementById('importar-dados-input')?.click()}
 				>
 					<Upload size={16} />
 					{$t('config.dados.importar')}
@@ -470,8 +470,9 @@
 						accept=".json,application/json"
 						on:change={importarDados}
 						style="display: none;"
+						tabindex="-1"
 					/>
-				</label>
+				</button>
 			</div>
 		</section>
 
@@ -499,7 +500,7 @@
 					rows="5"
 					bind:value={suporteMensagem}
 					placeholder={$t('config.suporte.mensagem')}
-				/>
+				></textarea>
 			</div>
 
 			<button
@@ -531,6 +532,7 @@
 	{#if showResetModal}
 		<div
 			class="modal-overlay"
+			role="presentation"
 			on:click|self={() => (showResetModal = false)}
 			on:keydown|self={(e) => e.key === 'Escape' && (showResetModal = false)}
 			transition:fade
@@ -541,7 +543,7 @@
 				aria-labelledby="resetModalTitle"
 				aria-describedby="resetModalDesc"
 				tabindex="-1"
-				transition:slide|local={{ y: -50, duration: 250 }}
+				transition:slide|local={{ duration: 250 }}
 			>
 				<h2 id="resetModalTitle"><RotateCcw size={24} /> {$t('modal.repor.titulo')}</h2>
 				<p id="resetModalDesc">{$t('modal.repor.descricao')}</p>
@@ -561,6 +563,7 @@
 	{#if showExportModal}
 		<div
 			class="modal-overlay"
+			role="presentation"
 			on:click|self={() => (showExportModal = false)}
 			on:keydown|self={(e) => e.key === 'Escape' && (showExportModal = false)}
 			transition:fade
@@ -571,7 +574,7 @@
 				aria-labelledby="exportModalTitle"
 				aria-describedby="exportModalDesc"
 				tabindex="-1"
-				transition:slide|local={{ y: -50, duration: 250 }}
+				transition:slide|local={{ duration: 250 }}
 			>
 				<h2 id="exportModalTitle"><Download size={24} /> {$t('modal.exportar.titulo')}</h2>
 				<p id="exportModalDesc">{$t('modal.exportar.descricao')}</p>
@@ -591,6 +594,7 @@
 	{#if showDeleteModal}
 		<div
 			class="modal-overlay"
+			role="presentation"
 			on:click|self={() => (showDeleteModal = false)}
 			on:keydown|self={(e) => e.key === 'Escape' && (showDeleteModal = false)}
 			transition:fade
@@ -601,7 +605,7 @@
 				aria-labelledby="deleteModalTitle"
 				aria-describedby="deleteModalDesc1 deleteModalDesc2 deleteModalDesc3"
 				tabindex="-1"
-				transition:slide|local={{ y: -50, duration: 250 }}
+				transition:slide|local={{ duration: 250 }}
 			>
 				<h2 id="deleteModalTitle"><Trash2 size={24} /> {$t('modal.eliminar.titulo')}</h2>
 				<p id="deleteModalDesc1"><strong>{$t('modal.eliminar.atencao')}</strong></p>
@@ -721,20 +725,13 @@
 		gap: 0.4rem; /* Espaço entre label e input/botão */
 	}
 
-	.config-item label,
-	label.btn {
+	.config-item label {
 		font-weight: 500;
 		font-size: 0.9rem; /* Tamanho de label */
 		color: var(--app-text-color);
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-	}
-	label.btn {
-		display: inline-flex;
-		justify-content: center;
-		font-size: 0.9rem; /* Consistência com outros botões */
-		padding: 0.6rem 1rem;
 	}
 
 	.input,
@@ -969,8 +966,7 @@
 		.header-controls .btn {
 			width: 100%;
 		}
-		.config-secao .config-item .btn-full-width,
-		.config-secao .config-item label.btn-full-width {
+		.config-secao .config-item .btn-full-width {
 			width: 100%;
 		}
 		.config-acoes-perigo {

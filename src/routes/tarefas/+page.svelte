@@ -32,7 +32,14 @@
 
 	// DICIONÁRIO DE TRADUÇÕES LOCAL
 
-	const taskTranslations = {
+	type TaskTranslationDict = {
+		[key: string]: string;
+	};
+
+	const taskTranslations: {
+		pt: TaskTranslationDict;
+		en: TaskTranslationDict;
+	} = {
 		pt: {
 			'tarefas.tituloPagina': 'As Minhas Tarefas',
 			'tarefas.filtro.todosProjetos': 'Todos os projetos',
@@ -303,8 +310,8 @@
 		if (!dataString) return $t('tarefas.card.dataNaoDisponivel');
 		try {
 			let langTag = $configuracoes.idioma || 'pt';
-			if (langTag === 'pt') langTag = 'pt-PT';
-			else if (langTag === 'en') langTag = 'en-GB';
+			if (langTag === 'pt-PT') langTag = 'pt-PT';
+			else if (langTag === 'en-GB') langTag = 'en-GB';
 
 			return new Date(dataString).toLocaleDateString(langTag, {
 				day: '2-digit',
@@ -416,6 +423,7 @@
 				on:dragover={handleDragOver}
 				on:drop|preventDefault={(e) => handleDrop(e, statusOpt.value)}
 				data-status={statusOpt.value}
+				role="list"
 			>
 				<h3 class="column-header">
 					<svelte:component this={statusOpt.icon} size={18} />
@@ -425,7 +433,7 @@
 					>
 				</h3>
 				<div class="tasks-list">
-					{#each tarefasFiltradas.filter((t) => t.status === statusOpt.value) as tarefa (tarefa.id)}
+					{#each tarefasFiltradas.filter((tarefa) => tarefa.status === statusOpt.value) as tarefa (tarefa.id)}
 						<div
 							class="tarefa-card priority-{tarefa.prioridade}"
 							draggable="true"
@@ -433,6 +441,7 @@
 							on:dragend={handleDragEnd}
 							in:fade={{ duration: 200 }}
 							out:fade={{ duration: 150 }}
+							role="listitem"
 						>
 							<div class="tarefa-card-header">
 								<div class="tarefa-identifier">
@@ -496,8 +505,17 @@
 	</div>
 
 	{#if tarefaEditando}
-		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
-			<div class="modal-dialog" transition:slide={{ duration: 250, y: 50 }}>
+		<div
+			class="modal-backdrop"
+			role="dialog"
+			tabindex="0"
+			on:click|self={fecharModal}
+			on:keydown={(e) => {
+				if (e.key === 'Escape') fecharModal();
+			}}
+			transition:fade={{ duration: 150 }}
+		>
+			<div class="modal-dialog" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<h2 class="modal-title">
 						{tarefaEditando.id
@@ -602,8 +620,18 @@
 	{/if}
 
 	{#if tarefaParaExcluir}
-		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
-			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250, y: 50 }}>
+		<div
+			class="modal-backdrop"
+			role="dialog"
+			tabindex="0"
+			aria-modal="true"
+			on:click|self={fecharModal}
+			on:keydown={(e) => {
+				if (e.key === 'Escape') fecharModal();
+			}}
+			transition:fade={{ duration: 150 }}
+		>
+			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<AlertTriangle size={24} class="confirmation-icon" />
 					<h2 class="modal-title">{$t('tarefas.modal.excluir.titulo')}</h2>

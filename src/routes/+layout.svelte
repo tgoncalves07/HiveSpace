@@ -7,7 +7,11 @@
 	import { derived } from 'svelte/store';
 
 	// DICIONÁRIO DE TRADUÇÕES LOCAL
-	const layoutTranslations = {
+	type LayoutTranslationDict = {
+		[key: string]: string;
+	};
+
+	const layoutTranslations: Record<'pt' | 'en', LayoutTranslationDict> = {
 		pt: {
 			'layout.link.principal': 'Página Principal',
 			'layout.link.projetos': 'Projetos',

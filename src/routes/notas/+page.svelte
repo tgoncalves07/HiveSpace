@@ -18,7 +18,14 @@
 	import { configuracoes } from '../../lib/stores/pageStore';
 
 	// --- DICIONÁRIO DE TRADUÇÕES PARA A PÁGINA DE NOTAS ---
-	const notesTranslations = {
+	type NotesTranslationDict = {
+		[key: string]: string;
+	};
+
+	const notesTranslations: {
+		pt: NotesTranslationDict;
+		en: NotesTranslationDict;
+	} = {
 		pt: {
 			'notas.tituloPagina': ' As Minhas Notas',
 			'notas.pesquisarPlaceholder': 'Pesquisar notas...',
@@ -197,9 +204,9 @@
 		if (!dateString) return $t('notas.dataNaoDisponivel');
 		const date = new Date(dateString);
 
-		let langTag = $configuracoes.idioma || 'pt';
+		let langTag = String($configuracoes.idioma) || 'pt';
 		if (langTag === 'pt') langTag = 'pt-PT';
-		else if (langTag === 'en') langTag = 'en-US';
+		else if (langTag === 'en') langTag = 'en-GB';
 
 		try {
 			const dateOptions: Intl.DateTimeFormatOptions = {
@@ -317,17 +324,17 @@
 					>
 						<div class="note-card-header">
 							<h3 class="note-title">{note.title}</h3>
-							<div class="note-actions" on:click|stopPropagation>
+							<div class="note-actions" role="group" tabindex="-1">
 								<button
 									class="icon-button"
-									on:click={() => openEditModal(note)}
+									on:click|stopPropagation={() => openEditModal(note)}
 									aria-label={$t('notas.acao.editar')}
 								>
 									<Edit size={17} />
 								</button>
 								<button
 									class="icon-button danger"
-									on:click={() => solicitarExcluir(note)}
+									on:click|stopPropagation={() => solicitarExcluir(note)}
 									aria-label={$t('notas.acao.excluir')}
 								>
 									<Trash2 size={17} />
@@ -365,8 +372,20 @@
 	</div>
 
 	{#if showModal}
-		<div class="modal-backdrop" on:click|self={closeModal} transition:fade={{ duration: 150 }}>
-			<div class="modal-dialog" transition:slide={{ duration: 250, y: 50 }}>
+		<div
+			class="modal-backdrop"
+			on:click|self={closeModal}
+			on:keydown={(e) => {
+				if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+					closeModal();
+				}
+			}}
+			tabindex="0"
+			role="dialog"
+			aria-modal="true"
+			transition:fade={{ duration: 150 }}
+		>
+			<div class="modal-dialog" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<h2 class="modal-title">
 						{isEditing ? $t('notas.modal.editar.titulo') : $t('notas.modal.adicionar.titulo')}
@@ -438,9 +457,17 @@
 		<div
 			class="modal-backdrop"
 			on:click|self={fecharModalExclusao}
+			on:keydown={(e) => {
+				if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+					fecharModalExclusao();
+				}
+			}}
+			tabindex="0"
+			role="dialog"
+			aria-modal="true"
 			transition:fade={{ duration: 150 }}
 		>
-			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250, y: 50 }}>
+			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<AlertTriangle size={24} class="confirmation-icon" />
 					<h2 class="modal-title">{$t('notas.modal.excluir.titulo')}</h2>

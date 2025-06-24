@@ -6,7 +6,14 @@
 	import { configuracoes, type Idioma as AppIdioma } from '../../lib/stores/pageStore';
 
 	// --- DICIONÁRIO DE TRADUÇÕES PARA O CALENDÁRIO ---
-	const calendarTranslations = {
+	type CalendarTranslationDict = {
+		[key: string]: string;
+	};
+
+	const calendarTranslations: {
+		pt: CalendarTranslationDict;
+		en: CalendarTranslationDict;
+	} = {
 		pt: {
 			'calendar.titulo': ' O Meu Calendário',
 			'calendar.meses.janeiro': 'Janeiro',
@@ -377,8 +384,23 @@
 
 	<!-- Modal para adicionar lembrete -->
 	{#if showReminderModal}
-		<div class="modal-backdrop" on:click={closeReminderModal}>
-			<div class="modal-dialog" on:click|stopPropagation>
+		<div
+			class="modal-backdrop"
+			role="button"
+			tabindex="0"
+			aria-label="Close modal"
+			on:click={closeReminderModal}
+			on:keydown={(e) =>
+				(e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') && closeReminderModal()}
+		>
+			<div
+				class="modal-dialog"
+				role="dialog"
+				aria-modal="true"
+				on:click|stopPropagation
+				tabindex="0"
+				on:keydown={(e) => e.stopPropagation()}
+			>
 				<div class="modal-dialog-header">
 					<h2 class="modal-title">{$t('calendar.modal.novoLembrete')}</h2>
 					<button

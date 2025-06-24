@@ -25,7 +25,15 @@
 
 	import { configuracoes } from '../../lib/stores/pageStore';
 
-	const projectTranslations = {
+	// Define a type with an index signature for translation dictionaries
+	type TranslationDict = {
+		[key: string]: string;
+	};
+
+	const projectTranslations: {
+		pt: TranslationDict;
+		en: TranslationDict;
+	} = {
 		pt: {
 			'projetos.tituloPagina': 'Os Meus Projetos',
 			'projetos.filtro.todosStatus': 'Todos os Projetos',
@@ -229,8 +237,8 @@
 		try {
 			let langTag = get(configuracoes).idioma || 'pt';
 
-			if (langTag === 'pt') langTag = 'pt-PT';
-			else if (langTag === 'en') langTag = 'en-GB';
+			if (String(langTag) === 'pt') langTag = 'pt-PT';
+			else if (String(langTag) === 'en') langTag = 'en-GB';
 
 			// A data vinda do input é 'YYYY-MM-DD'. Para evitar problemas de fuso horário,
 			// adicionamos 'T00:00:00' para garantir que é interpretada como o início do dia local.
@@ -380,8 +388,18 @@
 	</div>
 
 	{#if showModal}
-		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
-			<div class="modal-dialog" transition:slide={{ duration: 250, y: 50 }}>
+		<div
+			class="modal-backdrop"
+			role="button"
+			tabindex="0"
+			aria-label="Close modal"
+			on:click|self={fecharModal}
+			on:keydown|self={(e) => {
+				if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') fecharModal();
+			}}
+			transition:fade={{ duration: 150 }}
+		>
+			<div class="modal-dialog" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<h2 class="modal-title">
 						{editando ? $t('projetos.modal.editar.titulo') : $t('projetos.modal.adicionar.titulo')}
@@ -463,9 +481,9 @@
 						<button type="submit" class="button primary-button">
 							{editando ? $t('projetos.modal.form.salvar') : $t('projetos.modal.form.criar')}
 						</button>
-						<button type="button" class="button secondary-button" on:click={fecharModal}
-							>{$t('projetos.modal.form.cancelar')}</button
-						>
+						<button type="button" class="button secondary-button" on:click={fecharModal}>
+							{$t('projetos.modal.form.cancelar')}
+						</button>
 					</div>
 				</form>
 			</div>
@@ -473,8 +491,18 @@
 	{/if}
 
 	{#if projetoParaExcluir}
-		<div class="modal-backdrop" on:click|self={fecharModal} transition:fade={{ duration: 150 }}>
-			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250, y: 50 }}>
+		<div
+			class="modal-backdrop"
+			role="button"
+			tabindex="0"
+			aria-label="Close modal"
+			on:click|self={fecharModal}
+			on:keydown|self={(e) => {
+				if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') fecharModal();
+			}}
+			transition:fade={{ duration: 150 }}
+		>
+			<div class="modal-dialog confirmation-modal" transition:slide={{ duration: 250 }}>
 				<div class="modal-dialog-header">
 					<AlertTriangle size={24} class="confirmation-icon" />
 					<h2 class="modal-title">{$t('projetos.modal.excluir.titulo')}</h2>
@@ -486,9 +514,9 @@
 				</p>
 				<p class="irreversible-warning">{$t('projetos.modal.excluir.aviso')}</p>
 				<div class="modal-dialog-actions">
-					<button class="button secondary-button" on:click={fecharModal}
-						>{$t('projetos.modal.form.cancelar')}</button
-					>
+					<button class="button secondary-button" on:click={fecharModal}>
+						{$t('projetos.modal.form.cancelar')}
+					</button>
 					<button class="button danger-button" on:click={confirmarExclusao}>
 						<Trash2 size={16} />
 						{$t('projetos.modal.excluir.confirmar')}
