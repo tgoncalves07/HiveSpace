@@ -41,7 +41,7 @@
 	// Store derivada 't' LOCAL
 	const t = derived(configuracoes, ($cfg) => {
 		return (key: string, replacements?: Record<string, string | number>): string => {
-			const selectedLang = $cfg.idioma as keyof typeof layoutTranslations; // Tipo mais específico
+			const selectedLang = $cfg.idioma as keyof typeof layoutTranslations;
 			let langDict = layoutTranslations[selectedLang] || layoutTranslations.pt;
 			let text = langDict?.[key] || layoutTranslations.pt?.[key] || key;
 

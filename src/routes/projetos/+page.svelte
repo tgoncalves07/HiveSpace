@@ -1,7 +1,5 @@
-<!-- routes/projetos/+page.svelte -->
 <script lang="ts">
 	import { fade, slide } from 'svelte/transition';
-	// CORREÇÃO: Renomear import para 'projetos' para consistência
 	import { projetos, type Projeto } from '../../lib/stores/projetos';
 	import { onMount } from 'svelte';
 	import { get, derived } from 'svelte/store';
