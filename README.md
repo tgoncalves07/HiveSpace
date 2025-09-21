@@ -1,5 +1,3 @@
-# sv
-
 <!-- Badges -->
 <p align="center">
   <img src="https://img.shields.io/badge/SvelteKit-ff3e00?style=for-the-badge&logo=svelte&logoColor=white" />
