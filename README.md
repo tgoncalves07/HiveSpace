@@ -27,8 +27,8 @@
 ---
 
 ## ✨ Sobre o Projeto
-O **HiveSpace** nasceu como um projeto académico, onde obtive **17 valores em 20** na PAP.  
-O objetivo é fornecer uma aplicação simples, intuitiva e eficiente para ajudar qualquer pessoa a organizar o seu **trabalho pessoal**, sem burocracia e sem necessidade de **login ou registo**.
+O **HiveSpace** nasceu como um projeto escolar, onde obtive **17 valores em 20** na PAP.  
+O objetivo é fornecer uma aplicação simples, intuitiva e eficiente para ajudar qualquer pessoa a organizar o seu **trabalho pessoal**, sem dores de cabeça e sem necessidade de **login ou registo**.
 
 
 ## ✨ About the Project
