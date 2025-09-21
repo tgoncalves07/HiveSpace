@@ -16,6 +16,11 @@
 </p>
 
 <p align="center">
+  Open-source application for <b>personal work management</b>, created as part of my <br />
+  <i>Professional Aptitude Project</i> in the course of <b>Management and Programming of Computer Systems</b>.
+</p>
+
+<p align="center">
   🔗 <a href="https://hivespace.vercel.app" target="_blank"><b>hivespace.vercel.app</b></a>
 </p>
 
@@ -27,11 +32,46 @@ O objetivo é fornecer uma aplicação simples, intuitiva e eficiente para ajuda
 
 ---
 
+## ✨ About the Project
+**HiveSpace** was born as an academic project, where I achieved a **grade of 17 out of 20** in my Professional Aptitude Project (PAP).  
+The goal is to provide a simple, intuitive, and efficient application to help anyone organize their **personal work**, without bureaucracy and without the need for **login or registration**.
+
+--
+
 ## 🚀 Funcionalidades
 - ✅ Gestão rápida e prática de tarefas  
 - ✅ Interface intuitiva e responsiva  
 - ✅ Utilização instantânea (não precisa autenticação)  
 - ✅ Código aberto e disponível para a comunidade  
+
+---
+
+## 🚀 Features
+- ✅ Quick and practical task management  
+- ✅ Intuitive and responsive interface  
+- ✅ Instant use (no authentication required)  
+- ✅ Open-source and available to the community
+
+
+## 🤝 Agradecimentos
+Este projeto só foi possível graças a todo o apoio que recebi durante o seu desenvolvimento.  
+Um agradecimento especial a:  
+
+- **ReduxFlakes** 🧑‍💻 — pela ajuda técnica e sugestões valiosas  
+- **Fl1x1n** 💡 — pelo suporte e contributos cruciais no processo  
+
+💛 Obrigado por fazerem parte desta jornada!
+
+---
+
+### 🤝 Acknowledgements 
+This project was only possible thanks to all the support I received during its development.  
+A special thanks to:  
+
+- **ReduxFlakes** 🧑‍💻 — for the technical help and valuable suggestions  
+- **Fl1x1n** 💡 — for the support and crucial contributions to the process  
+
+💛 Thank you for being part of this journey!
 
 ---
 
@@ -41,6 +81,13 @@ O objetivo é fornecer uma aplicação simples, intuitiva e eficiente para ajuda
 - [Vercel](https://vercel.com/) — Hospedagem  
 
 ---
+
+## 🛠️ Technologies Used
+- [SvelteKit](https://kit.svelte.dev/) — Main framework  
+- **HTML / CSS / TypeScript** — Application core  
+- [Vercel](https://vercel.com/) — Hosting
+
+--
 
 ## ⚙️ Instalação Local
 
