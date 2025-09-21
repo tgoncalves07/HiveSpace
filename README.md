@@ -35,7 +35,7 @@ O objetivo é fornecer uma aplicação simples, intuitiva e eficiente para ajuda
 **HiveSpace** was born as an academic project, where I achieved a **grade of 17 out of 20** in my Professional Aptitude Project (PAP).  
 The goal is to provide a simple, intuitive, and efficient application to help anyone organize their **personal work**, without bureaucracy and without the need for **login or registration**.
 
---
+---
 
 ## 🚀 Funcionalidades
 - ✅ Gestão rápida e prática de tarefas  
